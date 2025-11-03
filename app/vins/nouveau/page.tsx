@@ -40,17 +40,23 @@ export default function NouveauVin() {
     const files = e.target.files
     if (!files) return
 
+    const newPhotosArray: { file: File; preview: string; commentaire: string }[] = []
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const preview = URL.createObjectURL(file)
-      setPhotos(prev => [...prev, { file, preview, commentaire: '' }])
+      newPhotosArray.push({ file, preview, commentaire: '' })
     }
+    setPhotos(prev => [...prev, ...newPhotosArray])
+    setCurrentPhotoIndex(photos.length) // Aller sur la première nouvelle photo
   }
 
   const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index))
-    if (currentPhotoIndex >= photos.length - 1) {
-      setCurrentPhotoIndex(Math.max(0, photos.length - 2))
+    const newPhotos = photos.filter((_, i) => i !== index)
+    setPhotos(newPhotos)
+    if (newPhotos.length === 0) {
+      setCurrentPhotoIndex(0)
+    } else if (currentPhotoIndex >= newPhotos.length) {
+      setCurrentPhotoIndex(newPhotos.length - 1)
     }
   }
 
@@ -58,6 +64,14 @@ export default function NouveauVin() {
     setPhotos(prev => prev.map((photo, i) => 
       i === index ? { ...photo, commentaire } : photo
     ))
+  }
+
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)
+  }
+
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -339,13 +353,13 @@ export default function NouveauVin() {
             </div>
           </div>
 
-          {/* Carte 3 : Photos avec CARROUSEL - VERT */}
+          {/* Carte 3 : Photos avec CARROUSEL - VERT - RÉDUIT */}
           <div className="bg-gradient-to-br from-white to-green-50 rounded-3xl shadow-2xl p-8 border-4 border-green-200">
             <h2 className="text-3xl font-black text-green-900 mb-6 flex items-center gap-3">
               <span className="bg-gradient-to-br from-green-500 to-green-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
                 3
               </span>
-              Photos
+              Photos {photos.length > 0 && `(${photos.length})`}
             </h2>
             
             <input
@@ -368,12 +382,12 @@ export default function NouveauVin() {
 
             {photos.length > 0 && (
               <div className="mt-8">
-                {/* CARROUSEL */}
+                {/* CARROUSEL - HAUTEUR RÉDUITE */}
                 <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-                  {/* Image principale */}
-                  <div className="relative h-96 flex items-center justify-center p-4">
+                  {/* Image principale - RÉDUIT à h-56 au lieu de h-96 */}
+                  <div className="relative h-56 flex items-center justify-center p-4">
                     <img 
-                      src={photos[currentPhotoIndex].preview} 
+                      src={photos[currentPhotoIndex]?.preview} 
                       alt={`Photo ${currentPhotoIndex + 1}`}
                       className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
                     />
@@ -383,15 +397,15 @@ export default function NouveauVin() {
                       <>
                         <button
                           type="button"
-                          onClick={() => setCurrentPhotoIndex((currentPhotoIndex - 1 + photos.length) % photos.length)}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                          onClick={prevPhoto}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
                         >
                           ‹
                         </button>
                         <button
                           type="button"
-                          onClick={() => setCurrentPhotoIndex((currentPhotoIndex + 1) % photos.length)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                          onClick={nextPhoto}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
                         >
                           ›
                         </button>
@@ -399,7 +413,7 @@ export default function NouveauVin() {
                     )}
 
                     {/* Compteur */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full text-lg font-black shadow-lg">
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg">
                       {currentPhotoIndex + 1} / {photos.length}
                     </div>
 
@@ -407,32 +421,32 @@ export default function NouveauVin() {
                     <button
                       type="button"
                       onClick={() => removePhoto(currentPhotoIndex)}
-                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-xl"
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-lg"
                     >
                       ✕
                     </button>
                   </div>
 
-                  {/* Commentaire */}
-                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-6 border-t-4 border-green-500">
+                  {/* Commentaire - RÉDUIT */}
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 border-t-4 border-green-500">
                     <input
                       type="text"
-                      placeholder="💬 Ajouter un commentaire sur cette photo..."
-                      value={photos[currentPhotoIndex].commentaire}
+                      placeholder="💬 Commentaire..."
+                      value={photos[currentPhotoIndex]?.commentaire || ''}
                       onChange={(e) => updatePhotoComment(currentPhotoIndex, e.target.value)}
-                      className="w-full px-5 py-4 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-green-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
+                      className="w-full px-4 py-3 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-green-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
                     />
                   </div>
 
-                  {/* Miniatures */}
+                  {/* Miniatures - RÉDUITES */}
                   {photos.length > 1 && (
-                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto">
+                    <div className="bg-gray-900 p-3 flex gap-2 overflow-x-auto">
                       {photos.map((photo, index) => (
                         <button
                           key={index}
                           type="button"
                           onClick={() => setCurrentPhotoIndex(index)}
-                          className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
+                          className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-3 transition-all hover:scale-110 ${
                             index === currentPhotoIndex 
                               ? 'border-green-400 shadow-lg shadow-green-500/50' 
                               : 'border-gray-600 hover:border-green-300 opacity-60 hover:opacity-100'
@@ -440,7 +454,7 @@ export default function NouveauVin() {
                         >
                           <img
                             src={photo.preview}
-                            alt={`Miniature ${index + 1}`}
+                            alt={`Mini ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
                         </button>
@@ -464,7 +478,7 @@ export default function NouveauVin() {
               name="commentaire_general"
               value={formData.commentaire_general}
               onChange={handleChange}
-              rows={6}
+              rows={5}
               className="w-full px-5 py-4 bg-white border-3 border-orange-300 rounded-2xl focus:border-orange-600 focus:ring-4 focus:ring-orange-200 focus:outline-none transition"
               placeholder="📝 Cartons, emplacement cave, notes de dégustation, historique..."
             />

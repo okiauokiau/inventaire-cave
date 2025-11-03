@@ -29,12 +29,6 @@ export default function ModifierVin() {
     cepage: '',
     degre_alcool: '',
     volume_bouteille: '',
-    description: '',
-    garde_optimale_min: '',
-    garde_optimale_max: '',
-    temperature_service: '',
-    accords_mets: '',
-    prix_achat_unitaire: '',
     commentaire_general: '',
   })
 
@@ -64,12 +58,6 @@ export default function ModifierVin() {
         cepage: data.cepage || '',
         degre_alcool: data.degre_alcool?.toString() || '',
         volume_bouteille: data.volume_bouteille || '',
-        description: data.description || '',
-        garde_optimale_min: data.garde_optimale_min?.toString() || '',
-        garde_optimale_max: data.garde_optimale_max?.toString() || '',
-        temperature_service: data.temperature_service || '',
-        accords_mets: data.accords_mets || '',
-        prix_achat_unitaire: data.prix_achat_unitaire?.toString() || '',
         commentaire_general: data.commentaire_general || '',
       })
 
@@ -96,15 +84,13 @@ export default function ModifierVin() {
     const files = e.target.files
     if (!files) return
 
+    const newPhotosArray: { file: File; preview: string; commentaire: string }[] = []
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const preview = URL.createObjectURL(file)
-      setNewPhotos(prev => [...prev, { file, preview, commentaire: '' }])
+      newPhotosArray.push({ file, preview, commentaire: '' })
     }
-  }
-
-  const removeNewPhoto = (index: number) => {
-    setNewPhotos(prev => prev.filter((_, i) => i !== index))
+    setNewPhotos(prev => [...prev, ...newPhotosArray])
   }
 
   const updateNewPhotoComment = (index: number, commentaire: string) => {
@@ -126,14 +112,42 @@ export default function ModifierVin() {
       const { error } = await supabase.from('photos').delete().eq('id', photoId)
       if (error) throw error
 
-      setPhotos(prev => prev.filter(p => p.id !== photoId))
-      if (currentPhotoIndex >= photos.length - 1) {
-        setCurrentPhotoIndex(Math.max(0, photos.length - 2))
+      const newPhotos = photos.filter(p => p.id !== photoId)
+      setPhotos(newPhotos)
+      
+      const allPhotos = [...newPhotos, ...newPhotos]
+      if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
+        setCurrentPhotoIndex(allPhotos.length - 1)
       }
+      
       alert('Photo supprimée')
     } catch (error) {
       console.error('Erreur:', error)
       alert('Erreur lors de la suppression')
+    }
+  }
+
+  const removeNewPhoto = (index: number) => {
+    const updatedNewPhotos = newPhotos.filter((_, i) => i !== index)
+    setNewPhotos(updatedNewPhotos)
+    
+    const allPhotos = [...photos, ...updatedNewPhotos]
+    if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
+      setCurrentPhotoIndex(allPhotos.length - 1)
+    }
+  }
+
+  const allPhotos = [...photos, ...newPhotos]
+
+  const prevPhoto = () => {
+    if (allPhotos.length > 0) {
+      setCurrentPhotoIndex((prev) => (prev - 1 + allPhotos.length) % allPhotos.length)
+    }
+  }
+
+  const nextPhoto = () => {
+    if (allPhotos.length > 0) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % allPhotos.length)
     }
   }
 
@@ -155,12 +169,6 @@ export default function ModifierVin() {
           cepage: formData.cepage || null,
           degre_alcool: formData.degre_alcool ? parseFloat(formData.degre_alcool) : null,
           volume_bouteille: formData.volume_bouteille || null,
-          description: formData.description || null,
-          garde_optimale_min: formData.garde_optimale_min ? parseInt(formData.garde_optimale_min) : null,
-          garde_optimale_max: formData.garde_optimale_max ? parseInt(formData.garde_optimale_max) : null,
-          temperature_service: formData.temperature_service || null,
-          accords_mets: formData.accords_mets || null,
-          prix_achat_unitaire: formData.prix_achat_unitaire ? parseFloat(formData.prix_achat_unitaire) : null,
           commentaire_general: formData.commentaire_general || null,
           updated_at: new Date().toISOString(),
         })
@@ -208,8 +216,6 @@ export default function ModifierVin() {
     }
   }
 
-  const allPhotos = [...photos, ...newPhotos.map(p => ({ url: p.preview, commentaire: p.commentaire, isNew: true }))]
-
   if (loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -225,6 +231,9 @@ export default function ModifierVin() {
       </div>
     )
   }
+
+  const currentPhoto = allPhotos[currentPhotoIndex]
+  const isNewPhoto = currentPhotoIndex >= photos.length
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -409,27 +418,13 @@ export default function ModifierVin() {
                   className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-black text-blue-900 mb-2 uppercase tracking-wider">
-                  💰 Prix (€)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="prix_achat_unitaire"
-                  value={formData.prix_achat_unitaire}
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
-                />
-              </div>
             </div>
           </div>
 
-          {/* Photos avec CARROUSEL - VERT */}
-          <div className="bg-gradient-to-br from-white to-green-50 rounded-3xl shadow-2xl p-8 border-4 border-green-200">
-            <h2 className="text-3xl font-black text-green-900 mb-6 flex items-center gap-3">
-              <span className="bg-gradient-to-br from-green-500 to-green-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+          {/* Photos avec CARROUSEL - ORANGE */}
+          <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
+            <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
+              <span className="bg-gradient-to-br from-orange-500 to-orange-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
                 📷
               </span>
               Photos ({allPhotos.length})
@@ -439,38 +434,40 @@ export default function ModifierVin() {
               <div className="mb-6">
                 {/* CARROUSEL */}
                 <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-                  <div className="relative h-96 flex items-center justify-center p-4">
-                    <img 
-                      src={allPhotos[currentPhotoIndex].url} 
-                      alt={`Photo ${currentPhotoIndex + 1}`}
-                      className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
-                    />
+                  <div className="relative h-64 flex items-center justify-center p-4">
+                    {currentPhoto && (
+                      <img 
+                        src={currentPhoto.url || currentPhoto.preview} 
+                        alt={`Photo ${currentPhotoIndex + 1}`}
+                        className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+                      />
+                    )}
                     
                     {allPhotos.length > 1 && (
                       <>
                         <button
                           type="button"
-                          onClick={() => setCurrentPhotoIndex((currentPhotoIndex - 1 + allPhotos.length) % allPhotos.length)}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                          onClick={prevPhoto}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
                         >
                           ‹
                         </button>
                         <button
                           type="button"
-                          onClick={() => setCurrentPhotoIndex((currentPhotoIndex + 1) % allPhotos.length)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                          onClick={nextPhoto}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
                         >
                           ›
                         </button>
                       </>
                     )}
 
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full text-lg font-black shadow-lg">
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg">
                       {currentPhotoIndex + 1} / {allPhotos.length}
                     </div>
 
-                    {allPhotos[currentPhotoIndex].isNew && (
-                      <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg animate-pulse">
+                    {isNewPhoto && (
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-black shadow-lg animate-pulse">
                         ✨ NOUVELLE
                       </div>
                     )}
@@ -478,49 +475,63 @@ export default function ModifierVin() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (currentPhotoIndex < photos.length) {
-                          deleteExistingPhoto(photos[currentPhotoIndex].id, photos[currentPhotoIndex].url)
-                        } else {
+                        if (isNewPhoto) {
                           removeNewPhoto(currentPhotoIndex - photos.length)
+                        } else {
+                          deleteExistingPhoto(photos[currentPhotoIndex].id, photos[currentPhotoIndex].url)
                         }
                       }}
-                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-xl"
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-lg"
                     >
                       ✕
                     </button>
                   </div>
 
-                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-6 border-t-4 border-green-500">
-                    <div className="text-white font-semibold">
-                      {allPhotos[currentPhotoIndex].commentaire || '💬 Aucun commentaire'}
-                    </div>
+                  {/* Zone commentaire - éditable pour nouvelles photos */}
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 border-t-4 border-orange-500">
+                    {isNewPhoto ? (
+                      <input
+                        type="text"
+                        placeholder="💬 Ajouter un commentaire..."
+                        value={newPhotos[currentPhotoIndex - photos.length]?.commentaire || ''}
+                        onChange={(e) => updateNewPhotoComment(currentPhotoIndex - photos.length, e.target.value)}
+                        className="w-full px-4 py-3 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-orange-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
+                      />
+                    ) : (
+                      <div className="text-white font-semibold text-sm">
+                        {currentPhoto?.commentaire || '💬 Aucun commentaire'}
+                      </div>
+                    )}
                   </div>
 
                   {allPhotos.length > 1 && (
-                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto">
-                      {allPhotos.map((photo, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => setCurrentPhotoIndex(index)}
-                          className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
-                            index === currentPhotoIndex 
-                              ? 'border-green-400 shadow-lg shadow-green-500/50' 
-                              : 'border-gray-600 hover:border-green-300 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={`Miniature ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          {photo.isNew && (
-                            <div className="absolute inset-0 bg-green-500/30 flex items-center justify-center">
-                              <span className="text-white font-black text-xs">NEW</span>
-                            </div>
-                          )}
-                        </button>
-                      ))}
+                    <div className="bg-gray-900 p-3 flex gap-2 overflow-x-auto">
+                      {allPhotos.map((photo, index) => {
+                        const isNew = index >= photos.length
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setCurrentPhotoIndex(index)}
+                            className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-3 transition-all hover:scale-110 ${
+                              index === currentPhotoIndex 
+                                ? 'border-orange-400 shadow-lg shadow-orange-500/50' 
+                                : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <img
+                              src={photo.url || photo.preview}
+                              alt={`Mini ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {isNew && (
+                              <div className="absolute inset-0 bg-green-500/30 flex items-center justify-center">
+                                <span className="text-white font-black text-xs">NEW</span>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -539,17 +550,17 @@ export default function ModifierVin() {
             
             <label
               htmlFor="photo-input"
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-10 py-5 rounded-2xl cursor-pointer hover:shadow-2xl hover:scale-105 transition-all font-black text-xl border-4 border-green-400"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white px-10 py-5 rounded-2xl cursor-pointer hover:shadow-2xl hover:scale-105 transition-all font-black text-xl border-4 border-orange-400"
             >
               <span className="text-3xl">+</span>
               Ajouter des photos
             </label>
           </div>
 
-          {/* Commentaire - ORANGE */}
-          <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
-            <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
-              <span className="bg-gradient-to-br from-orange-500 to-orange-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+          {/* Commentaire - JAUNE */}
+          <div className="bg-gradient-to-br from-white to-yellow-50 rounded-3xl shadow-2xl p-8 border-4 border-yellow-200">
+            <h2 className="text-3xl font-black text-yellow-900 mb-6 flex items-center gap-3">
+              <span className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
                 📝
               </span>
               Notes & commentaires
@@ -558,8 +569,8 @@ export default function ModifierVin() {
               name="commentaire_general"
               value={formData.commentaire_general}
               onChange={handleChange}
-              rows={6}
-              className="w-full px-5 py-4 bg-white border-3 border-orange-300 rounded-2xl focus:border-orange-600 focus:ring-4 focus:ring-orange-200 focus:outline-none transition"
+              rows={5}
+              className="w-full px-5 py-4 bg-white border-3 border-yellow-300 rounded-2xl focus:border-yellow-600 focus:ring-4 focus:ring-yellow-200 focus:outline-none transition"
               placeholder="📝 Cartons, emplacement, notes..."
             />
           </div>
@@ -571,7 +582,7 @@ export default function ModifierVin() {
               disabled={loading}
               className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white py-6 rounded-2xl font-black hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 text-xl border-4 border-white shadow-xl"
             >
-              {loading ? '⏳ Enregistrement...' : '✓ Enregistrer'}
+              {loading ? '⏳ Enregistrement...' : '✓ Enregistrer les modifications'}
             </button>
             <Link
               href={`/vins/${id}`}
