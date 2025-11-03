@@ -110,16 +110,6 @@ export default function VinDetail() {
     }
   }
 
-  const prevPhoto = () => {
-    if (photos.length === 0) return
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)
-  }
-
-  const nextPhoto = () => {
-    if (photos.length === 0) return
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -158,10 +148,10 @@ export default function VinDetail() {
             <span className="bg-gradient-to-br from-purple-500 to-purple-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">📋</span>
             Informations du vin
           </h2>
-          {/* ... fields omitted ... */}
+          {/* Ici tu peux mettre les champs du vin si nécessaire */}
         </div>
 
-        {/* SECTION 4 : CARROUSEL PHOTOS - MODIFIÉ */}
+        {/* SECTION 2 : CARROUSEL PHOTOS */}
         {photos.length > 0 && (
           <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
             <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
@@ -170,20 +160,31 @@ export default function VinDetail() {
             </h2>
 
             <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl max-w-full">
-              {/* Image principale - responsive */}
+              {/* Image principale */}
               <div className="relative w-full h-auto flex items-center justify-center p-2 sm:p-4">
                 <img 
                   src={photos[currentPhotoIndex]?.url} 
                   alt={`Photo ${currentPhotoIndex + 1}`}
                   className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl transition-all duration-500 ease-in-out"
-
                 />
 
-                {/* Flèches (si plusieurs photos) */}
+                {/* Flèches */}
                 {photos.length > 1 && (
                   <>
-                    <button type="button" onClick={prevPhoto} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900">‹</button>
-                    <button type="button" onClick={nextPhoto} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900">›</button>
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)} 
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                    >
+                      ‹
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)} 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                    >
+                      ›
+                    </button>
                   </>
                 )}
 
@@ -200,13 +201,19 @@ export default function VinDetail() {
                 </div>
               )}
 
-              {/* Miniatures - scroll horizontal, tactile friendly */}
+              {/* Miniatures */}
               {photos.length > 1 && (
                 <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto" style={{ touchAction: 'pan-y' }}>
                   {photos.map((photo, index) => (
-                    <button key={photo.id} type="button" onClick={() => setCurrentPhotoIndex(index)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${index === currentPhotoIndex ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'}`}>
-                      <img src={photo.url} alt={`Mini ${index + 1}`} className="w-full h-full object-cover" />
+                    <button 
+                      key={photo.id} 
+                      type="button" 
+                      onClick={() => setCurrentPhotoIndex(index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
+                        index === currentPhotoIndex ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={photo.url} alt={`Miniature ${index + 1}`} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -215,7 +222,7 @@ export default function VinDetail() {
           </div>
         )}
 
-        {/* SECTION 5 : Commentaire */}
+        {/* SECTION 3 : Commentaire général */}
         {vin.commentaire_general && (
           <div className="bg-gradient-to-br from-white to-yellow-50 rounded-3xl shadow-2xl p-8 border-4 border-yellow-200">
             <h2 className="text-3xl font-black text-yellow-900 mb-6 flex items-center gap-3">
@@ -227,8 +234,6 @@ export default function VinDetail() {
             </div>
           </div>
         )}
-
-        {/* ... remaining sections unchanged ... */}
       </div>
     </div>
   )
