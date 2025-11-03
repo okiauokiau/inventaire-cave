@@ -357,15 +357,14 @@ export default function NouveauVin() {
             {/* CARROUSEL (si photos) */}
             {photos.length > 0 && (
               <div className="mt-8">
-                <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl max-w-full">
                   {/* Image principale */}
-                  <div className="relative h-80 flex items-center justify-center p-4">
+                  <div className="relative w-full aspect-[4/3] max-h-[70vh] flex items-center justify-center p-2 sm:p-4">
                     <img 
                       src={photos[currentPhotoIndex]?.preview} 
                       alt={`Photo ${currentPhotoIndex + 1}`}
-                      className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+                      className="w-full h-full object-contain rounded-2xl shadow-2xl"
                     />
-                    
                     {/* Flèches (si plusieurs photos) */}
                     {photos.length > 1 && (
                       <>
