@@ -430,11 +430,12 @@ export default function ModifierVin() {
               Photos ({allPhotos.length})
             </h2>
             
+            {/* CARROUSEL (si photos) */}
             {allPhotos.length > 0 && (
               <div className="mb-6">
-                {/* CARROUSEL */}
                 <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-                  <div className="relative h-64 flex items-center justify-center p-4">
+                  {/* Image principale */}
+                  <div className="relative h-80 flex items-center justify-center p-4">
                     {currentPhoto && (
                       <img 
                         src={currentPhoto.url || currentPhoto.preview} 
@@ -443,35 +444,39 @@ export default function ModifierVin() {
                       />
                     )}
                     
+                    {/* Flèches */}
                     {allPhotos.length > 1 && (
                       <>
                         <button
                           type="button"
                           onClick={prevPhoto}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
                         >
                           ‹
                         </button>
                         <button
                           type="button"
                           onClick={nextPhoto}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-2xl text-gray-900"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
                         >
                           ›
                         </button>
                       </>
                     )}
 
-                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg">
+                    {/* Compteur */}
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full text-lg font-black shadow-lg">
                       {currentPhotoIndex + 1} / {allPhotos.length}
                     </div>
 
+                    {/* Badge NOUVELLE */}
                     {isNewPhoto && (
-                      <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-black shadow-lg animate-pulse">
+                      <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg animate-pulse">
                         ✨ NOUVELLE
                       </div>
                     )}
 
+                    {/* Bouton supprimer */}
                     <button
                       type="button"
                       onClick={() => {
@@ -481,31 +486,32 @@ export default function ModifierVin() {
                           deleteExistingPhoto(photos[currentPhotoIndex].id, photos[currentPhotoIndex].url)
                         }
                       }}
-                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-lg"
+                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-xl"
                     >
                       ✕
                     </button>
                   </div>
 
-                  {/* Zone commentaire - éditable pour nouvelles photos */}
-                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 border-t-4 border-orange-500">
+                  {/* Commentaire */}
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-5 border-t-4 border-orange-500">
                     {isNewPhoto ? (
                       <input
                         type="text"
                         placeholder="💬 Ajouter un commentaire..."
                         value={newPhotos[currentPhotoIndex - photos.length]?.commentaire || ''}
                         onChange={(e) => updateNewPhotoComment(currentPhotoIndex - photos.length, e.target.value)}
-                        className="w-full px-4 py-3 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-orange-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
+                        className="w-full px-5 py-3 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-orange-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
                       />
                     ) : (
-                      <div className="text-white font-semibold text-sm">
-                        {currentPhoto?.commentaire || '💬 Aucun commentaire'}
+                      <div className="text-white font-semibold">
+                        {currentPhoto?.commentaire ? `💬 ${currentPhoto.commentaire}` : '💬 Aucun commentaire'}
                       </div>
                     )}
                   </div>
 
+                  {/* Miniatures */}
                   {allPhotos.length > 1 && (
-                    <div className="bg-gray-900 p-3 flex gap-2 overflow-x-auto">
+                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto">
                       {allPhotos.map((photo, index) => {
                         const isNew = index >= photos.length
                         return (
@@ -513,9 +519,9 @@ export default function ModifierVin() {
                             key={index}
                             type="button"
                             onClick={() => setCurrentPhotoIndex(index)}
-                            className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-3 transition-all hover:scale-110 ${
+                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
                               index === currentPhotoIndex 
-                                ? 'border-orange-400 shadow-lg shadow-orange-500/50' 
+                                ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' 
                                 : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
                             }`}
                           >
@@ -538,6 +544,7 @@ export default function ModifierVin() {
               </div>
             )}
 
+            {/* Bouton ajouter */}
             <input
               type="file"
               accept="image/*"
@@ -571,7 +578,7 @@ export default function ModifierVin() {
               onChange={handleChange}
               rows={5}
               className="w-full px-5 py-4 bg-white border-3 border-yellow-300 rounded-2xl focus:border-yellow-600 focus:ring-4 focus:ring-yellow-200 focus:outline-none transition"
-              placeholder="📝 Cartons, emplacement, notes..."
+              placeholder="📝 Cartons, emplacement..."
             />
           </div>
 
@@ -582,7 +589,7 @@ export default function ModifierVin() {
               disabled={loading}
               className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white py-6 rounded-2xl font-black hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 text-xl border-4 border-white shadow-xl"
             >
-              {loading ? '⏳ Enregistrement...' : '✓ Enregistrer les modifications'}
+              {loading ? '⏳ Enregistrement...' : '✓ Enregistrer'}
             </button>
             <Link
               href={`/vins/${id}`}
