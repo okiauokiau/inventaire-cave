@@ -168,64 +168,81 @@ export default function VinDetail() {
           </h2>
         </div>
 
-        {/* SECTION 2 : CARROUSEL PREMIUM */}
-        {photos.length > 0 && (
-          <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
-            <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
-              <span className="bg-gradient-to-br from-orange-500 to-orange-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">📷</span>
-              Photos ({photos.length})
-            </h2>
+{/* SECTION 2 : CARROUSEL PREMIUM */}
+{photos.length > 0 && (
+  <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
+    <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
+      <span className="bg-gradient-to-br from-orange-500 to-orange-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">📷</span>
+      Photos ({photos.length})
+    </h2>
 
-            <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-              {/* SLIDER */}
-              <div className="relative h-[70vh]">
-                {photos.map((photo, index) => (
-                  <img
-                    key={photo.id}
-                    src={photo.url}
-                    alt={photo.commentaire || 'Photo'}
-                    className={`absolute top-0 left-0 w-full h-full object-contain rounded-2xl transition-opacity duration-1000 ease-in-out ${
-                      index === currentPhotoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                  />
-                ))}
-              </div>
+    <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+      {/* SLIDER PHOTO PRINCIPALE */}
+      <div className="relative h-[80vh] md:h-[70vh]">
+        {photos.map((photo, index) => (
+          <img
+            key={photo.id}
+            src={photo.url}
+            alt={photo.commentaire || 'Photo'}
+            className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl transition-opacity duration-1000 ease-in-out ${
+              index === currentPhotoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          />
+        ))}
 
-              {/* Flèches */}
-              {photos.length > 1 && (
-                <>
-                  <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900">‹</button>
-                  <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900">›</button>
-                </>
-              )}
-
-              {/* Compteur */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full text-lg font-black shadow-lg">
-                {currentPhotoIndex + 1} / {photos.length}
-              </div>
-
-              {/* Miniatures */}
-              {photos.length > 1 && (
-                <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto" style={{ touchAction: 'pan-y' }}>
-                  {photos.map((photo, index) => (
-                    <button key={photo.id} onClick={() => { stopAutoSlide(); setCurrentPhotoIndex(index) }} className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
-                      index === currentPhotoIndex ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
-                    }`}>
-                      <img src={photo.url} alt={`Miniature ${index + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Commentaire photo */}
-              {photos[currentPhotoIndex]?.commentaire && (
-                <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-5 border-t-4 border-orange-500">
-                  <div className="text-white font-semibold">💬 {photos[currentPhotoIndex].commentaire}</div>
-                </div>
-              )}
-            </div>
+        {/* Commentaire photo en overlay */}
+        {photos[currentPhotoIndex]?.commentaire && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-2xl text-lg font-semibold backdrop-blur-sm">
+            💬 {photos[currentPhotoIndex].commentaire}
           </div>
         )}
+
+        {/* Flèches navigation */}
+        {photos.length > 1 && (
+          <>
+            <button
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-3xl text-gray-900"
+            >
+              ‹
+            </button>
+            <button
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-3xl text-gray-900"
+            >
+              ›
+            </button>
+          </>
+        )}
+
+        {/* Compteur */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full text-lg font-black shadow-lg">
+          {currentPhotoIndex + 1} / {photos.length}
+        </div>
+      </div>
+
+      {/* MINIATURES */}
+      {photos.length > 1 && (
+        <div className="absolute bottom-0 left-0 right-0 flex gap-3 overflow-x-auto p-4 bg-black/30 backdrop-blur-md rounded-b-3xl">
+          {photos.map((photo, index) => (
+            <button
+              key={photo.id}
+              onClick={() => { stopAutoSlide(); setCurrentPhotoIndex(index) }}
+              className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all ${
+                index === currentPhotoIndex
+                  ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110'
+                  : 'border-gray-600 opacity-60 hover:opacity-100 hover:border-orange-300'
+              }`}
+            >
+              <img src={photo.url} alt={`Miniature ${index + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
 
         {/* SECTION 3 : Commentaire général */}
         {vin.commentaire_general && (
