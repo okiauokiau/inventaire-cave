@@ -416,12 +416,12 @@ export default function ModifierVin() {
               <div className="mb-6">
                 <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl max-w-full">
                   {/* Image principale - responsive */}
-                  <div className="relative w-full aspect-[4/3] max-h-[70vh] flex items-center justify-center p-2 sm:p-4">
+                  <div className="relative w-full h-auto flex items-center justify-center p-2 sm:p-4">
                     {currentPhoto && (
                       <img 
                         src={currentPhoto.url || currentPhoto.preview} 
                         alt={`Photo ${currentPhotoIndex + 1}`}
-                        className="w-full h-full object-contain rounded-2xl shadow-2xl transition-all duration-500 ease-in-out"
+                        className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl transition-all duration-500 ease-in-out"
                       />
                     )}
 
