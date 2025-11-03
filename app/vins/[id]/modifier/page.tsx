@@ -17,7 +17,7 @@ export default function ModifierVin() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string; commentaire: string }[]>([])
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
-  
+
   const [formData, setFormData] = useState({
     nom: '',
     producteur: '',
@@ -114,12 +114,12 @@ export default function ModifierVin() {
 
       const newPhotos = photos.filter(p => p.id !== photoId)
       setPhotos(newPhotos)
-      
+
       const allPhotos = [...newPhotos, ...newPhotos]
       if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
         setCurrentPhotoIndex(allPhotos.length - 1)
       }
-      
+
       alert('Photo supprimée')
     } catch (error) {
       console.error('Erreur:', error)
@@ -130,7 +130,7 @@ export default function ModifierVin() {
   const removeNewPhoto = (index: number) => {
     const updatedNewPhotos = newPhotos.filter((_, i) => i !== index)
     setNewPhotos(updatedNewPhotos)
-    
+
     const allPhotos = [...photos, ...updatedNewPhotos]
     if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
       setCurrentPhotoIndex(allPhotos.length - 1)
@@ -140,15 +140,13 @@ export default function ModifierVin() {
   const allPhotos = [...photos, ...newPhotos]
 
   const prevPhoto = () => {
-    if (allPhotos.length > 0) {
-      setCurrentPhotoIndex((prev) => (prev - 1 + allPhotos.length) % allPhotos.length)
-    }
+    if (allPhotos.length === 0) return
+    setCurrentPhotoIndex((prev) => (prev - 1 + allPhotos.length) % allPhotos.length)
   }
 
   const nextPhoto = () => {
-    if (allPhotos.length > 0) {
-      setCurrentPhotoIndex((prev) => (prev + 1) % allPhotos.length)
-    }
+    if (allPhotos.length === 0) return
+    setCurrentPhotoIndex((prev) => (prev + 1) % allPhotos.length)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -256,7 +254,7 @@ export default function ModifierVin() {
 
       <div className="max-w-5xl mx-auto py-8 px-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* Informations essentielles - VIOLET */}
           <div className="bg-gradient-to-br from-white to-purple-50 rounded-3xl shadow-2xl p-8 border-4 border-purple-200">
             <h2 className="text-3xl font-black text-purple-900 mb-6 flex items-center gap-3">
@@ -265,7 +263,6 @@ export default function ModifierVin() {
               </span>
               Informations essentielles
             </h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wider">
@@ -356,7 +353,6 @@ export default function ModifierVin() {
               </span>
               Caractéristiques
             </h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-black text-blue-900 mb-2 uppercase tracking-wider">
@@ -406,21 +402,6 @@ export default function ModifierVin() {
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-black text-blue-900 mb-2 uppercase tracking-wider">
-                  🍇 Cépage
-                </label>
-                <input
-                  type="text"
-                  name="cepage"
-                  value={formData.cepage}
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Photos avec CARROUSEL - ORANGE */}
           <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
             <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
@@ -429,21 +410,21 @@ export default function ModifierVin() {
               </span>
               Photos ({allPhotos.length})
             </h2>
-            
+
             {/* CARROUSEL (si photos) */}
             {allPhotos.length > 0 && (
               <div className="mb-6">
                 <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl max-w-full">
-                  {/* Image principale */}
+                  {/* Image principale - responsive */}
                   <div className="relative w-full aspect-[4/3] max-h-[70vh] flex items-center justify-center p-2 sm:p-4">
                     {currentPhoto && (
                       <img 
                         src={currentPhoto.url || currentPhoto.preview} 
                         alt={`Photo ${currentPhotoIndex + 1}`}
-                        className="w-full h-full object-contain rounded-2xl shadow-2xl"
+                        className="w-full h-full object-contain rounded-2xl shadow-2xl transition-all duration-500 ease-in-out"
                       />
                     )}
-                    
+
                     {/* Flèches */}
                     {allPhotos.length > 1 && (
                       <>
@@ -509,9 +490,9 @@ export default function ModifierVin() {
                     )}
                   </div>
 
-                  {/* Miniatures */}
+                  {/* Miniatures - scroll horizontal, tactile friendly */}
                   {allPhotos.length > 1 && (
-                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto">
+                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto" style={{ touchAction: 'pan-y' }}>
                       {allPhotos.map((photo, index) => {
                         const isNew = index >= photos.length
                         return (
@@ -519,11 +500,7 @@ export default function ModifierVin() {
                             key={index}
                             type="button"
                             onClick={() => setCurrentPhotoIndex(index)}
-                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
-                              index === currentPhotoIndex 
-                                ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' 
-                                : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
-                            }`}
+                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${index === currentPhotoIndex ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'}`}
                           >
                             <img
                               src={photo.url || photo.preview}
@@ -554,7 +531,7 @@ export default function ModifierVin() {
               className="hidden"
               id="photo-input"
             />
-            
+
             <label
               htmlFor="photo-input"
               className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white px-10 py-5 rounded-2xl cursor-pointer hover:shadow-2xl hover:scale-105 transition-all font-black text-xl border-4 border-orange-400"
