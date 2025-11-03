@@ -401,7 +401,7 @@ export default function ModifierVin() {
                   className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
                 />
               </div>
-
+          </div>
           {/* Photos avec CARROUSEL - ORANGE */}
           <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
             <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
