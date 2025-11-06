@@ -17,7 +17,7 @@ export default function ModifierVin() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string; commentaire: string }[]>([])
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
-
+  
   const [formData, setFormData] = useState({
     nom: '',
     producteur: '',
@@ -94,7 +94,7 @@ export default function ModifierVin() {
   }
 
   const updateNewPhotoComment = (index: number, commentaire: string) => {
-    setNewPhotos(prev => prev.map((photo, i) =>
+    setNewPhotos(prev => prev.map((photo, i) => 
       i === index ? { ...photo, commentaire } : photo
     ))
   }
@@ -112,14 +112,14 @@ export default function ModifierVin() {
       const { error } = await supabase.from('photos').delete().eq('id', photoId)
       if (error) throw error
 
-      const updatedPhotos = photos.filter(p => p.id !== photoId)
-      setPhotos(updatedPhotos)
-
-      const all = [...updatedPhotos, ...newPhotos]
-      if (currentPhotoIndex >= all.length && all.length > 0) {
-        setCurrentPhotoIndex(all.length - 1)
+      const newPhotos = photos.filter(p => p.id !== photoId)
+      setPhotos(newPhotos)
+      
+      const allPhotos = [...newPhotos, ...newPhotos]
+      if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
+        setCurrentPhotoIndex(allPhotos.length - 1)
       }
-
+      
       alert('Photo supprimée')
     } catch (error) {
       console.error('Erreur:', error)
@@ -130,7 +130,7 @@ export default function ModifierVin() {
   const removeNewPhoto = (index: number) => {
     const updatedNewPhotos = newPhotos.filter((_, i) => i !== index)
     setNewPhotos(updatedNewPhotos)
-
+    
     const allPhotos = [...photos, ...updatedNewPhotos]
     if (currentPhotoIndex >= allPhotos.length && allPhotos.length > 0) {
       setCurrentPhotoIndex(allPhotos.length - 1)
@@ -140,13 +140,15 @@ export default function ModifierVin() {
   const allPhotos = [...photos, ...newPhotos]
 
   const prevPhoto = () => {
-    if (allPhotos.length === 0) return
-    setCurrentPhotoIndex((prev) => (prev - 1 + allPhotos.length) % allPhotos.length)
+    if (allPhotos.length > 0) {
+      setCurrentPhotoIndex((prev) => (prev - 1 + allPhotos.length) % allPhotos.length)
+    }
   }
 
   const nextPhoto = () => {
-    if (allPhotos.length === 0) return
-    setCurrentPhotoIndex((prev) => (prev + 1) % allPhotos.length)
+    if (allPhotos.length > 0) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % allPhotos.length)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -254,7 +256,7 @@ export default function ModifierVin() {
 
       <div className="max-w-5xl mx-auto py-8 px-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-
+          
           {/* Informations essentielles - VIOLET */}
           <div className="bg-gradient-to-br from-white to-purple-50 rounded-3xl shadow-2xl p-8 border-4 border-purple-200">
             <h2 className="text-3xl font-black text-purple-900 mb-6 flex items-center gap-3">
@@ -263,6 +265,7 @@ export default function ModifierVin() {
               </span>
               Informations essentielles
             </h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wider">
@@ -353,6 +356,7 @@ export default function ModifierVin() {
               </span>
               Caractéristiques
             </h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-black text-blue-900 mb-2 uppercase tracking-wider">
@@ -401,60 +405,198 @@ export default function ModifierVin() {
                   className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-black text-blue-900 mb-2 uppercase tracking-wider">
+                  🍇 Cépage
+                </label>
+                <input
+                  type="text"
+                  name="cepage"
+                  value={formData.cepage}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 bg-white border-3 border-blue-300 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-200 focus:outline-none transition"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Carrousel Photos - ORANGE */}
+          {/* Photos avec CARROUSEL - ORANGE */}
           <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
             <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
               <span className="bg-gradient-to-br from-orange-500 to-orange-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
-                📸
+                📷
               </span>
-              Photos
+              Photos ({allPhotos.length})
             </h2>
-
+            
+            {/* CARROUSEL (si photos) */}
             {allPhotos.length > 0 && (
-              <div className="mb-4">
-                <img
-                  src={currentPhoto.preview || currentPhoto.url}
-                  alt={`Photo ${currentPhotoIndex + 1}`}
-                  className="rounded-2xl w-full max-h-[400px] object-cover shadow-lg"
-                />
-                <div className="flex justify-between mt-2">
-                  <button type="button" onClick={prevPhoto} className="bg-orange-400 text-white px-4 py-2 rounded-2xl">←</button>
-                  <span>{currentPhotoIndex + 1} / {allPhotos.length}</span>
-                  <button type="button" onClick={nextPhoto} className="bg-orange-400 text-white px-4 py-2 rounded-2xl">→</button>
-                </div>
-                <div className="mt-2 flex justify-between items-center gap-2">
-                  {isNewPhoto ? (
-                    <button type="button" onClick={() => removeNewPhoto(currentPhotoIndex - photos.length)} className="text-red-600 font-bold">Supprimer</button>
-                  ) : (
-                    <button type="button" onClick={() => deleteExistingPhoto(currentPhoto.id, currentPhoto.url)} className="text-red-600 font-bold">Supprimer</button>
+              <div className="mb-6">
+                <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                  {/* Image principale */}
+                  <div className="relative h-80 flex items-center justify-center p-4">
+                    {currentPhoto && (
+                      <img 
+                        src={currentPhoto.url || currentPhoto.preview} 
+                        alt={`Photo ${currentPhotoIndex + 1}`}
+                        className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+                      />
+                    )}
+                    
+                    {/* Flèches */}
+                    {allPhotos.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={prevPhoto}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          onClick={nextPhoto}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all font-black text-3xl text-gray-900"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+
+                    {/* Compteur */}
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full text-lg font-black shadow-lg">
+                      {currentPhotoIndex + 1} / {allPhotos.length}
+                    </div>
+
+                    {/* Badge NOUVELLE */}
+                    {isNewPhoto && (
+                      <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-black shadow-lg animate-pulse">
+                        ✨ NOUVELLE
+                      </div>
+                    )}
+
+                    {/* Bouton supprimer */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isNewPhoto) {
+                          removeNewPhoto(currentPhotoIndex - photos.length)
+                        } else {
+                          deleteExistingPhoto(photos[currentPhotoIndex].id, photos[currentPhotoIndex].url)
+                        }
+                      }}
+                      className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all font-black text-xl"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Commentaire */}
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-5 border-t-4 border-orange-500">
+                    {isNewPhoto ? (
+                      <input
+                        type="text"
+                        placeholder="💬 Ajouter un commentaire..."
+                        value={newPhotos[currentPhotoIndex - photos.length]?.commentaire || ''}
+                        onChange={(e) => updateNewPhotoComment(currentPhotoIndex - photos.length, e.target.value)}
+                        className="w-full px-5 py-3 bg-white/10 border-2 border-white/20 rounded-2xl focus:border-orange-400 focus:bg-white/20 focus:outline-none transition text-white placeholder-white/60 font-semibold"
+                      />
+                    ) : (
+                      <div className="text-white font-semibold">
+                        {currentPhoto?.commentaire ? `💬 ${currentPhoto.commentaire}` : '💬 Aucun commentaire'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Miniatures */}
+                  {allPhotos.length > 1 && (
+                    <div className="bg-gray-900 p-4 flex gap-3 overflow-x-auto">
+                      {allPhotos.map((photo, index) => {
+                        const isNew = index >= photos.length
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setCurrentPhotoIndex(index)}
+                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-4 transition-all hover:scale-110 ${
+                              index === currentPhotoIndex 
+                                ? 'border-orange-400 shadow-lg shadow-orange-500/50 scale-110' 
+                                : 'border-gray-600 hover:border-orange-300 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <img
+                              src={photo.url || photo.preview}
+                              alt={`Mini ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {isNew && (
+                              <div className="absolute inset-0 bg-green-500/30 flex items-center justify-center">
+                                <span className="text-white font-black text-xs">NEW</span>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
             )}
 
-            <input type="file" multiple accept="image/*" onChange={handlePhotoCapture} className="mt-4" />
+            {/* Bouton ajouter */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={handlePhotoCapture}
+              className="hidden"
+              id="photo-input"
+            />
+            
+            <label
+              htmlFor="photo-input"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white px-10 py-5 rounded-2xl cursor-pointer hover:shadow-2xl hover:scale-105 transition-all font-black text-xl border-4 border-orange-400"
+            >
+              <span className="text-3xl">+</span>
+              Ajouter des photos
+            </label>
           </div>
 
-          {/* Commentaire général */}
-          <div>
-            <label className="block text-sm font-black text-gray-900 mb-2 uppercase tracking-wider">
-              📝 Commentaire général
-            </label>
+          {/* Commentaire - JAUNE */}
+          <div className="bg-gradient-to-br from-white to-yellow-50 rounded-3xl shadow-2xl p-8 border-4 border-yellow-200">
+            <h2 className="text-3xl font-black text-yellow-900 mb-6 flex items-center gap-3">
+              <span className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                📝
+              </span>
+              Notes & commentaires
+            </h2>
             <textarea
               name="commentaire_general"
               value={formData.commentaire_general}
               onChange={handleChange}
-              className="w-full px-5 py-4 bg-white border-3 border-gray-300 rounded-2xl focus:border-gray-600 focus:ring-4 focus:ring-gray-200 focus:outline-none transition"
+              rows={5}
+              className="w-full px-5 py-4 bg-white border-3 border-yellow-300 rounded-2xl focus:border-yellow-600 focus:ring-4 focus:ring-yellow-200 focus:outline-none transition"
+              placeholder="📝 Cartons, emplacement..."
             />
           </div>
 
-          <div className="flex justify-end">
-            <button type="submit" disabled={loading} className="bg-green-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-green-600 transition">
-              {loading ? 'Modification...' : 'Modifier le vin'}
+          {/* Boutons */}
+          <div className="flex gap-4 sticky bottom-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white py-6 rounded-2xl font-black hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 text-xl border-4 border-white shadow-xl"
+            >
+              {loading ? '⏳ Enregistrement...' : '✓ Enregistrer'}
             </button>
+            <Link
+              href={`/vins/${id}`}
+              className="px-10 py-6 bg-white border-4 border-gray-300 rounded-2xl font-black hover:bg-gray-50 hover:scale-105 transition-all text-center shadow-lg"
+            >
+              Annuler
+            </Link>
           </div>
         </form>
       </div>
