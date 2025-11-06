@@ -366,209 +366,299 @@ export default function VinDetail() {
           </div>
         )}
 
-        {/* SECTION 6 : Graphiques en barres */}
+        {/* SECTION 6 : Graphiques en camembert */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             📊 Répartition des {stats.total} bouteilles
           </h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* États qualitatifs */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">
-                États qualitatifs
-              </h3>
-              <div className="space-y-3">
-                {stats.excellent > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Excellent</span>
-                      <span className="text-sm font-bold text-green-600">{stats.excellent}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-green-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.excellent / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.bon > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Bon</span>
-                      <span className="text-sm font-bold text-blue-600">{stats.bon}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-blue-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.bon / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.correct > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Correct</span>
-                      <span className="text-sm font-bold text-yellow-600">{stats.correct}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-yellow-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.correct / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.moyen > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Moyen</span>
-                      <span className="text-sm font-bold text-orange-600">{stats.moyen}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-orange-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.moyen / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.mauvais > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Mauvais</span>
-                      <span className="text-sm font-bold text-red-600">{stats.mauvais}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-red-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.mauvais / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.difficulte > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Difficulté évolution</span>
-                      <span className="text-sm font-bold text-purple-600">{stats.difficulte}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-purple-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(stats.difficulte / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.total === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    Aucune bouteille
-                  </div>
-                )}
-              </div>
+          {stats.total === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-lg">
+              Aucune bouteille dans cet inventaire
             </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* États qualitatifs - Camembert */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">
+                  États qualitatifs
+                </h3>
+                <div className="flex flex-col items-center">
+                  <svg width="300" height="300" viewBox="0 0 300 300">
+                    {(() => {
+                      const centerX = 150
+                      const centerY = 150
+                      const radius = 120
+                      let currentAngle = -90
 
-            {/* Niveaux de remplissage */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">
-                Niveaux de remplissage
-              </h3>
-              <div className="space-y-3">
-                {niveaux.plein > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Plein</span>
-                      <span className="text-sm font-bold text-green-600">{niveaux.plein}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-green-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.plein / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
+                      const categories = [
+                        { value: stats.excellent, color: '#16a34a', label: 'Excellent' },
+                        { value: stats.bon, color: '#3b82f6', label: 'Bon' },
+                        { value: stats.correct, color: '#eab308', label: 'Correct' },
+                        { value: stats.moyen, color: '#f97316', label: 'Moyen' },
+                        { value: stats.mauvais, color: '#dc2626', label: 'Mauvais' },
+                        { value: stats.difficulte, color: '#9333ea', label: 'Difficulté' }
+                      ].filter(cat => cat.value > 0)
+
+                      // Si une seule catégorie à 100%, dessiner un cercle complet
+                      if (categories.length === 1) {
+                        return (
+                          <circle
+                            cx={centerX}
+                            cy={centerY}
+                            r={radius}
+                            fill={categories[0].color}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        )
+                      }
+
+                      return categories.map((cat, index) => {
+                        const percentage = (cat.value / stats.total) * 100
+                        const angle = (percentage / 100) * 360
+                        const startAngle = currentAngle
+                        const endAngle = currentAngle + angle
+
+                        const startRad = (startAngle * Math.PI) / 180
+                        const endRad = (endAngle * Math.PI) / 180
+
+                        const x1 = centerX + radius * Math.cos(startRad)
+                        const y1 = centerY + radius * Math.sin(startRad)
+                        const x2 = centerX + radius * Math.cos(endRad)
+                        const y2 = centerY + radius * Math.sin(endRad)
+
+                        const largeArc = angle > 180 ? 1 : 0
+
+                        const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`
+
+                        currentAngle += angle
+
+                        return (
+                          <path
+                            key={index}
+                            d={pathData}
+                            fill={cat.color}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        )
+                      })
+                    })()}
+                  </svg>
+
+                  <div className="mt-4 w-full space-y-2">
+                    {stats.excellent > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#16a34a', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Excellent</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#16a34a' }}>
+                          {stats.excellent} ({Math.round((stats.excellent / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {stats.bon > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#3b82f6', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Bon</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#2563eb' }}>
+                          {stats.bon} ({Math.round((stats.bon / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {stats.correct > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#eab308', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Correct</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#ca8a04' }}>
+                          {stats.correct} ({Math.round((stats.correct / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {stats.moyen > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#f97316', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Moyen</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#ea580c' }}>
+                          {stats.moyen} ({Math.round((stats.moyen / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {stats.mauvais > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#dc2626', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Mauvais</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#dc2626' }}>
+                          {stats.mauvais} ({Math.round((stats.mauvais / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {stats.difficulte > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#9333ea', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Difficulté</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#9333ea' }}>
+                          {stats.difficulte} ({Math.round((stats.difficulte / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {niveaux.haut_epaule > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Haut épaule</span>
-                      <span className="text-sm font-bold text-green-500">{niveaux.haut_epaule}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-green-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.haut_epaule / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
+                </div>
+              </div>
+
+              {/* Niveaux de remplissage - Camembert */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">
+                  Niveaux de remplissage
+                </h3>
+                <div className="flex flex-col items-center">
+                  <svg width="300" height="300" viewBox="0 0 300 300">
+                    {(() => {
+                      const centerX = 150
+                      const centerY = 150
+                      const radius = 120
+                      let currentAngle = -90
+
+                      const categories = [
+                        { value: niveaux.plein, color: '#16a34a', label: 'Plein' },
+                        { value: niveaux.haut_epaule, color: '#22c55e', label: 'Haut épaule' },
+                        { value: niveaux.mi_epaule, color: '#eab308', label: 'Mi-épaule' },
+                        { value: niveaux.bas_epaule, color: '#f97316', label: 'Bas épaule' },
+                        { value: niveaux.haut_goulot, color: '#ef4444', label: 'Haut goulot' },
+                        { value: niveaux.mi_goulot, color: '#dc2626', label: 'Mi-goulot' }
+                      ].filter(cat => cat.value > 0)
+
+                      // Si une seule catégorie à 100%, dessiner un cercle complet
+                      if (categories.length === 1) {
+                        return (
+                          <circle
+                            cx={centerX}
+                            cy={centerY}
+                            r={radius}
+                            fill={categories[0].color}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        )
+                      }
+
+                      return categories.map((cat, index) => {
+                        const percentage = (cat.value / stats.total) * 100
+                        const angle = (percentage / 100) * 360
+                        const startAngle = currentAngle
+                        const endAngle = currentAngle + angle
+
+                        const startRad = (startAngle * Math.PI) / 180
+                        const endRad = (endAngle * Math.PI) / 180
+
+                        const x1 = centerX + radius * Math.cos(startRad)
+                        const y1 = centerY + radius * Math.sin(startRad)
+                        const x2 = centerX + radius * Math.cos(endRad)
+                        const y2 = centerY + radius * Math.sin(endRad)
+
+                        const largeArc = angle > 180 ? 1 : 0
+
+                        const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`
+
+                        currentAngle += angle
+
+                        return (
+                          <path
+                            key={index}
+                            d={pathData}
+                            fill={cat.color}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        )
+                      })
+                    })()}
+                  </svg>
+
+                  <div className="mt-4 w-full space-y-2">
+                    {niveaux.plein > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#16a34a', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Plein</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#16a34a' }}>
+                          {niveaux.plein} ({Math.round((niveaux.plein / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {niveaux.haut_epaule > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#22c55e', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Haut épaule</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#22c55e' }}>
+                          {niveaux.haut_epaule} ({Math.round((niveaux.haut_epaule / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {niveaux.mi_epaule > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#eab308', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Mi-épaule</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#eab308' }}>
+                          {niveaux.mi_epaule} ({Math.round((niveaux.mi_epaule / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {niveaux.bas_epaule > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#f97316', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Bas épaule</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#f97316' }}>
+                          {niveaux.bas_epaule} ({Math.round((niveaux.bas_epaule / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {niveaux.haut_goulot > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#ef4444', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Haut goulot</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#ef4444' }}>
+                          {niveaux.haut_goulot} ({Math.round((niveaux.haut_goulot / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                    {niveaux.mi_goulot > 0 && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#dc2626', borderRadius: '3px' }}></div>
+                          <span className="text-sm" style={{ color: '#374151' }}>Mi-goulot</span>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: '#dc2626' }}>
+                          {niveaux.mi_goulot} ({Math.round((niveaux.mi_goulot / stats.total) * 100)}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {niveaux.mi_epaule > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Mi-épaule</span>
-                      <span className="text-sm font-bold text-yellow-500">{niveaux.mi_epaule}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-yellow-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.mi_epaule / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {niveaux.bas_epaule > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Bas épaule</span>
-                      <span className="text-sm font-bold text-orange-500">{niveaux.bas_epaule}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-orange-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.bas_epaule / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {niveaux.haut_goulot > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Haut goulot</span>
-                      <span className="text-sm font-bold text-red-500">{niveaux.haut_goulot}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-red-500 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.haut_goulot / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {niveaux.mi_goulot > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-gray-700">Mi-goulot</span>
-                      <span className="text-sm font-bold text-red-600">{niveaux.mi_goulot}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-red-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(niveaux.mi_goulot / stats.total) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                {stats.total === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    Aucune bouteille
-                  </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Bouton ajouter */}
           <div className="mt-8 pt-6 border-t-2 border-gray-200 text-center">
