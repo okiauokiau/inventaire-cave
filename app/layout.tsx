@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/lib/auth-context'
 
 export const metadata: Metadata = {
   title: 'Inventaire Cave à Vin',
@@ -13,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body suppressHydrationWarning>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }

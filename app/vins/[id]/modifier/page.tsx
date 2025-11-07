@@ -17,7 +17,11 @@ export default function ModifierVin() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string; commentaire: string }[]>([])
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
-  
+
+  const [channels, setChannels] = useState<Array<{ id: string; name: string }>>([])
+  const [tags, setTags] = useState<Array<{ id: string; name: string; color: string | null }>>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+
   const [formData, setFormData] = useState({
     nom: '',
     producteur: '',
@@ -30,6 +34,8 @@ export default function ModifierVin() {
     degre_alcool: '',
     volume_bouteille: '',
     commentaire_general: '',
+    channel_id: '',
+    status: 'en_vente' as 'en_vente' | 'accepte' | 'vendu' | 'archive',
   })
 
   useEffect(() => {
@@ -59,8 +65,11 @@ export default function ModifierVin() {
         degre_alcool: data.degre_alcool?.toString() || '',
         volume_bouteille: data.volume_bouteille || '',
         commentaire_general: data.commentaire_general || '',
+        channel_id: data.channel_id || '',
+        status: data.status || 'en_vente',
       })
 
+      // Charger les photos
       const { data: photosData } = await supabase
         .from('photos')
         .select('*')
@@ -68,6 +77,30 @@ export default function ModifierVin() {
         .order('ordre', { ascending: true })
 
       setPhotos(photosData || [])
+
+      // Charger les canaux de vente
+      const { data: channelsData } = await supabase
+        .from('sales_channels')
+        .select('*')
+        .order('name')
+
+      setChannels(channelsData || [])
+
+      // Charger tous les tags
+      const { data: tagsData } = await supabase
+        .from('tags')
+        .select('*')
+        .order('name')
+
+      setTags(tagsData || [])
+
+      // Charger les tags associés à ce vin
+      const { data: vinTagsData } = await supabase
+        .from('vin_tags')
+        .select('tag_id')
+        .eq('vin_id', id)
+
+      setSelectedTags(vinTagsData?.map(vt => vt.tag_id) || [])
     } catch (error) {
       console.error('Erreur:', error)
       alert('Erreur lors du chargement du vin')
@@ -77,7 +110,26 @@ export default function ModifierVin() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+
+    // Si on change le canal de vente, réinitialiser le statut à "en_vente"
+    if (name === 'channel_id' && value !== formData.channel_id) {
+      setFormData({
+        ...formData,
+        [name]: value,
+        status: 'en_vente'
+      })
+    } else {
+      setFormData({ ...formData, [name]: value })
+    }
+  }
+
+  const toggleTag = (tagId: string) => {
+    if (selectedTags.includes(tagId)) {
+      setSelectedTags(selectedTags.filter(id => id !== tagId))
+    } else {
+      setSelectedTags([...selectedTags, tagId])
+    }
   }
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +208,21 @@ export default function ModifierVin() {
     setLoading(true)
 
     try {
+      // Gestion des dates selon le statut
+      let dateAcceptation = null
+      let dateVente = null
+
+      if (formData.status === 'accepte') {
+        // Garder la date existante ou créer une nouvelle
+        dateAcceptation = vin?.date_acceptation || new Date().toISOString()
+        dateVente = null
+      } else if (formData.status === 'vendu') {
+        // Garder la date existante ou créer une nouvelle
+        dateVente = vin?.date_vente || new Date().toISOString()
+        dateAcceptation = null
+      }
+      // Si status = 'en_vente' ou 'archive', les deux dates restent null
+
       const { error: vinError } = await supabase
         .from('vins')
         .update({
@@ -170,11 +237,29 @@ export default function ModifierVin() {
           degre_alcool: formData.degre_alcool ? parseFloat(formData.degre_alcool) : null,
           volume_bouteille: formData.volume_bouteille || null,
           commentaire_general: formData.commentaire_general || null,
+          channel_id: formData.channel_id || null,
+          status: formData.status,
+          date_acceptation: dateAcceptation,
+          date_vente: dateVente,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
 
       if (vinError) throw vinError
+
+      // Mettre à jour les tags
+      // Supprimer les anciens tags
+      await supabase
+        .from('vin_tags')
+        .delete()
+        .eq('vin_id', id)
+
+      // Ajouter les nouveaux tags
+      if (selectedTags.length > 0) {
+        await supabase
+          .from('vin_tags')
+          .insert(selectedTags.map(tagId => ({ vin_id: id, tag_id: tagId })))
+      }
 
       if (newPhotos.length > 0) {
         const maxOrdre = photos.length > 0 ? Math.max(...photos.map(p => p.ordre)) : 0
@@ -421,6 +506,114 @@ export default function ModifierVin() {
             </div>
           </div>
 
+          {/* Canal de vente et statut - CYAN */}
+          <div className="bg-gradient-to-br from-white to-cyan-50 rounded-3xl shadow-2xl p-8 border-4 border-cyan-200">
+            <h2 className="text-3xl font-black text-cyan-900 mb-6 flex items-center gap-3">
+              <span className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                🏪
+              </span>
+              Vente & Distribution
+            </h2>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-cyan-800 font-bold mb-3 text-xl">Canal de vente</label>
+                <select
+                  name="channel_id"
+                  value={formData.channel_id}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 bg-white border-3 border-cyan-300 rounded-2xl focus:border-cyan-600 focus:ring-4 focus:ring-cyan-200 focus:outline-none transition text-lg"
+                >
+                  <option value="">-- Aucun canal --</option>
+                  {channels.map(channel => (
+                    <option key={channel.id} value={channel.id}>{channel.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Checkbox conditionnelle selon le canal */}
+              {(() => {
+                const selectedChannel = channels.find(c => c.id === formData.channel_id)
+                const channelName = selectedChannel?.name || ''
+                // Normaliser en supprimant les accents et en minuscules
+                const channelNameNormalized = channelName
+                  .toLowerCase()
+                  .trim()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+
+                // Debug
+                console.log('Selected channel:', selectedChannel)
+                console.log('Channel name:', channelName)
+                console.log('Channel name normalized:', channelNameNormalized)
+                console.log('formData.channel_id:', formData.channel_id)
+
+                if (channelNameNormalized.includes('hotel') && channelNameNormalized.includes('vente')) {
+                  return (
+                    <div className="bg-white rounded-2xl p-6 border-3 border-cyan-300">
+                      <label className="flex items-center gap-4 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.status === 'accepte'}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              status: e.target.checked ? 'accepte' : 'en_vente'
+                            })
+                          }}
+                          className="w-6 h-6 text-cyan-600 rounded focus:ring-cyan-500"
+                        />
+                        <span className="text-lg font-bold text-cyan-900">
+                          ✓ Accepté par l'Hotel de vente
+                        </span>
+                      </label>
+                    </div>
+                  )
+                } else if (channelNameNormalized.includes('bon') && channelNameNormalized.includes('coin')) {
+                  return (
+                    <div className="bg-white rounded-2xl p-6 border-3 border-cyan-300">
+                      <label className="flex items-center gap-4 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.status === 'vendu'}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              status: e.target.checked ? 'vendu' : 'en_vente'
+                            })
+                          }}
+                          className="w-6 h-6 text-cyan-600 rounded focus:ring-cyan-500"
+                        />
+                        <span className="text-lg font-bold text-cyan-900">
+                          ✓ Vendu
+                        </span>
+                      </label>
+                    </div>
+                  )
+                } else if (formData.channel_id) {
+                  // Pour les autres canaux, afficher le dropdown de statut
+                  return (
+                    <div>
+                      <label className="block text-cyan-800 font-bold mb-3 text-xl">Statut</label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className="w-full px-5 py-4 bg-white border-3 border-cyan-300 rounded-2xl focus:border-cyan-600 focus:ring-4 focus:ring-cyan-200 focus:outline-none transition text-lg"
+                      >
+                        <option value="en_vente">En vente</option>
+                        <option value="accepte">Accepté</option>
+                        <option value="vendu">Vendu</option>
+                        <option value="archive">Archivé</option>
+                      </select>
+                    </div>
+                  )
+                }
+                return null
+              })()}
+            </div>
+          </div>
+
           {/* Photos avec CARROUSEL - ORANGE */}
           <div className="bg-gradient-to-br from-white to-orange-50 rounded-3xl shadow-2xl p-8 border-4 border-orange-200">
             <h2 className="text-3xl font-black text-orange-900 mb-6 flex items-center gap-3">
@@ -581,6 +774,37 @@ export default function ModifierVin() {
               placeholder="📝 Cartons, emplacement..."
             />
           </div>
+
+          {/* Tags - VIOLET */}
+          {tags.length > 0 && (
+            <div className="bg-gradient-to-br from-white to-purple-50 rounded-3xl shadow-2xl p-8 border-4 border-purple-200">
+              <h2 className="text-3xl font-black text-purple-900 mb-6 flex items-center gap-3">
+                <span className="bg-gradient-to-br from-purple-500 to-purple-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                  🏷️
+                </span>
+                Étiquettes
+              </h2>
+
+              <div className="flex flex-wrap gap-3">
+                {tags.map(tag => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className="px-6 py-3 rounded-full text-sm font-bold transition-all transform hover:scale-105"
+                    style={{
+                      backgroundColor: selectedTags.includes(tag.id) ? (tag.color || '#8b5cf6') : 'white',
+                      color: selectedTags.includes(tag.id) ? 'white' : (tag.color || '#8b5cf6'),
+                      border: `3px solid ${tag.color || '#8b5cf6'}`,
+                      boxShadow: selectedTags.includes(tag.id) ? '0 4px 15px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {selectedTags.includes(tag.id) ? '✓ ' : ''}{tag.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Boutons */}
           <div className="flex gap-4 sticky bottom-4">

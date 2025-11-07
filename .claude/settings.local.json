@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm install:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(if exist \".next\\dev\\lock\" del \".next\\dev\\lock\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAjout graphiques en camembert SVG pour la répartition des bouteilles\n\n- Remplacement des graphiques en barres par des camemberts interactifs\n- Utilisation de SVG pur avec styles inline (pas de dépendances externes)\n- Contournement des problèmes Tailwind v4 (classes de couleur non générées)\n- Support des cas à 100% (cercle complet au lieu d''arc)\n- Affichage de 2 camemberts : États qualitatifs + Niveaux de remplissage\n- Légendes avec carrés de couleur et pourcentages calculés dynamiquement\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(move apppage.tsx appvinspage.tsx)",
+      "Bash(nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
