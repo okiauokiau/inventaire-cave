@@ -20,6 +20,7 @@ type Article = {
   created_at: string
   created_by: string
   channel_id: string | null
+  channels?: SalesChannel[]
 }
 
 type SalesChannel = {
@@ -50,17 +51,53 @@ function ArticlesContent() {
 
   async function fetchData() {
     try {
-      // Charger les articles
-      const { data: articlesData, error: articlesError } = await supabase
-        .from('standard_articles')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const { data: { user } } = await supabase.auth.getUser()
 
-      if (articlesError) throw articlesError
-      setArticles(articlesData || [])
+      if (!user) {
+        setArticles([])
+        setLoading(false)
+        return
+      }
 
-      // Charger les canaux de vente selon le rôle
-      if (profile?.role === 'admin') {
+      // Récupérer le profil pour vérifier le rôle
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = profileData?.role
+
+      // Si admin, récupérer tous les articles
+      if (userRole === 'admin') {
+        const { data: articlesData, error: articlesError } = await supabase
+          .from('standard_articles')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (articlesError) throw articlesError
+
+        // Charger les canaux pour chaque article
+        if (articlesData) {
+          const articlesWithChannels = await Promise.all(
+            articlesData.map(async (article) => {
+              const { data: articleChannels } = await supabase
+                .from('article_channels')
+                .select(`
+                  channel_id,
+                  sales_channels (id, name)
+                `)
+                .eq('article_id', article.id)
+
+              return {
+                ...article,
+                channels: articleChannels?.map(ac => ac.sales_channels).filter(Boolean) || []
+              }
+            })
+          )
+          setArticles(articlesWithChannels)
+        }
+
         // Admin voit tous les canaux
         const { data: channelsData, error: channelsError } = await supabase
           .from('sales_channels')
@@ -70,17 +107,70 @@ function ArticlesContent() {
         if (channelsError) throw channelsError
         setChannels(channelsData || [])
       } else {
-        // Standard et moderator voient uniquement leurs canaux assignés
-        const { data: userChannelsData, error: userChannelsError } = await supabase
+        // Pour les non-admins, filtrer par canaux assignés
+
+        // 1. Récupérer les canaux de l'utilisateur
+        const { data: userChannelsData } = await supabase
           .from('user_channels')
           .select('channel_id, sales_channels(*)')
-          .eq('user_id', profile?.id)
+          .eq('user_id', user.id)
 
-        if (userChannelsError) throw userChannelsError
+        const userChannelIds = userChannelsData?.map(uc => uc.channel_id) || []
 
         // Extraire les canaux depuis la relation
         const channelsData = userChannelsData?.map(uc => uc.sales_channels).filter(Boolean) || []
         setChannels(channelsData)
+
+        if (userChannelIds.length === 0) {
+          // L'utilisateur n'a aucun canal assigné, ne voir aucun article
+          setArticles([])
+          setLoading(false)
+          return
+        }
+
+        // 2. Récupérer les articles associés à ces canaux via la table article_channels
+        const { data: articleChannelsData } = await supabase
+          .from('article_channels')
+          .select('article_id')
+          .in('channel_id', userChannelIds)
+
+        const articleIds = [...new Set(articleChannelsData?.map(ac => ac.article_id) || [])]
+
+        if (articleIds.length === 0) {
+          setArticles([])
+          setLoading(false)
+          return
+        }
+
+        // 3. Récupérer les articles filtrés
+        const { data: articlesData, error: articlesError } = await supabase
+          .from('standard_articles')
+          .select('*')
+          .in('id', articleIds)
+          .order('created_at', { ascending: false })
+
+        if (articlesError) throw articlesError
+
+        // Charger les canaux pour chaque article
+        if (articlesData) {
+          const articlesWithChannels = await Promise.all(
+            articlesData.map(async (article) => {
+              const { data: articleChannels } = await supabase
+                .from('article_channels')
+                .select(`
+                  channel_id,
+                  sales_channels (id, name)
+                `)
+                .eq('article_id', article.id)
+
+              return {
+                ...article,
+                channels: articleChannels?.map(ac => ac.sales_channels).filter(Boolean) || []
+              }
+            })
+          )
+          setArticles(articlesWithChannels)
+        }
       }
     } catch (error) {
       console.error('Erreur:', error)
@@ -94,7 +184,7 @@ function ArticlesContent() {
                        article.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        article.categorie?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchStatus = filterStatus === 'all' || article.status === filterStatus
-    const matchChannel = filterChannel === 'all' || article.channel_id === filterChannel
+    const matchChannel = filterChannel === 'all' || article.channels?.some(channel => channel.id === filterChannel)
     return matchSearch && matchStatus && matchChannel
   })
 

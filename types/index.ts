@@ -19,6 +19,7 @@ export interface Vin {
   commentaire_general?: string
   created_at?: string
   updated_at?: string
+  nombre_bouteilles?: number
 }
 
 export interface Photo {
@@ -100,3 +101,52 @@ export const VOLUMES = [
   '450 cl (Réhoboam)',
   '600 cl (Mathusalem)',
 ]
+
+// Types pour les canaux de vente (many-to-many)
+export interface SalesChannel {
+  id: string
+  name: string
+  description?: string | null
+  created_at?: string
+}
+
+export interface VinChannel {
+  id: string
+  vin_id: string
+  channel_id: string
+  created_at?: string
+}
+
+export interface ArticleChannel {
+  id: string
+  article_id: string
+  channel_id: string
+  created_at?: string
+}
+
+// Interface étendue pour Vin avec les canaux
+export interface VinWithChannels extends Vin {
+  channels?: SalesChannel[]
+}
+
+// Interface pour les articles standards
+export interface StandardArticle {
+  id: string
+  nom: string
+  description?: string
+  prix_achat?: number
+  prix_vente?: number
+  quantite?: number
+  categorie?: string
+  created_by?: string
+  status?: 'en_vente' | 'accepte' | 'vendu' | 'archive'
+  date_acceptation?: string
+  date_vente?: string
+  created_at?: string
+  updated_at?: string
+}
+
+// Interface étendue pour Article avec les canaux
+export interface StandardArticleWithChannels extends StandardArticle {
+  channels?: SalesChannel[]
+}

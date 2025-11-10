@@ -73,6 +73,8 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Jean@mail.com"
+              autoComplete="off"
               required
               disabled={loading}
               className="w-full px-3 py-2 border rounded-md"
@@ -93,6 +95,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="off"
               required
               disabled={loading}
               minLength={6}

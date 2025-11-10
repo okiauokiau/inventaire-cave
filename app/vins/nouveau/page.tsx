@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { COULEURS, VOLUMES } from '@/types'
 import { useRouter } from 'next/navigation'
@@ -11,6 +11,8 @@ export default function NouveauVin() {
   const [loading, setLoading] = useState(false)
   const [photos, setPhotos] = useState<{ file: File; preview: string; commentaire: string }[]>([])
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+  const [channels, setChannels] = useState<Array<{ id: string; name: string }>>([])
+
   
   const [formData, setFormData] = useState({
     nom: '',
@@ -24,10 +26,37 @@ export default function NouveauVin() {
     degre_alcool: '',
     volume_bouteille: '',
     commentaire_general: '',
+    selectedChannelIds: [] as string[],
   })
+
+  useEffect(() => {
+    fetchChannels()
+  }, [])
+
+  async function fetchChannels() {
+    try {
+      const { data: channelsData } = await supabase
+        .from('sales_channels')
+        .select('*')
+        .order('name')
+
+      setChannels(channelsData || [])
+    } catch (error) {
+      console.error('Erreur lors du chargement des canaux:', error)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleChannelToggle = (channelId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedChannelIds: prev.selectedChannelIds.includes(channelId)
+        ? prev.selectedChannelIds.filter(id => id !== channelId)
+        : [...prev.selectedChannelIds, channelId]
+    }))
   }
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +123,20 @@ export default function NouveauVin() {
         .single()
 
       if (vinError) throw vinError
+
+      // Insérer les canaux sélectionnés
+      if (formData.selectedChannelIds.length > 0) {
+        const vinChannelsToInsert = formData.selectedChannelIds.map(channelId => ({
+          vin_id: vin.id,
+          channel_id: channelId
+        }))
+
+        const { error: channelsError } = await supabase
+          .from('vin_channels')
+          .insert(vinChannelsToInsert)
+
+        if (channelsError) throw channelsError
+      }
 
       if (photos.length > 0) {
         for (let i = 0; i < photos.length; i++) {
@@ -248,6 +291,34 @@ export default function NouveauVin() {
                   className="w-full px-5 py-4 bg-white border-3 border-purple-300 rounded-2xl focus:border-purple-600 focus:ring-4 focus:ring-purple-200 focus:outline-none transition"
                   placeholder="France"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wider">
+                  🏪 Canaux de vente
+                </label>
+                <div className="bg-white border-3 border-purple-300 rounded-2xl p-5">
+                  {channels.length === 0 ? (
+                    <p className="text-gray-500 italic">Aucun canal disponible</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {channels.map(channel => (
+                        <label
+                          key={channel.id}
+                          className="flex items-center gap-3 cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.selectedChannelIds.includes(channel.id)}
+                            onChange={() => handleChannelToggle(channel.id)}
+                            className="w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500 focus:ring-2 cursor-pointer"
+                          />
+                          <span className="font-semibold text-gray-900">{channel.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

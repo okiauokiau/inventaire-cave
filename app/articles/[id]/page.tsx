@@ -64,13 +64,23 @@ function ArticleDetailContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([])
 
   // States for new photo uploads
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [photosToDelete, setPhotosToDelete] = useState<string[]>([])
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    nom: string
+    description: string
+    prix_achat: string
+    prix_vente: string
+    quantite: string
+    category_id: string
+    channel_id: string
+    status: 'en_vente' | 'accepte' | 'vendu' | 'archive'
+  }>({
     nom: '',
     description: '',
     prix_achat: '',
@@ -78,7 +88,7 @@ function ArticleDetailContent({ id }: { id: string }) {
     quantite: '1',
     category_id: '',
     channel_id: '',
-    status: 'en_vente' as const
+    status: 'en_vente'
   })
 
   useEffect(() => {
@@ -121,6 +131,15 @@ function ArticleDetailContent({ id }: { id: string }) {
         .order('ordre', { ascending: true })
 
       setPhotos(photosData || [])
+
+      // Récupérer les canaux assignés à l'article
+      const { data: articleChannels } = await supabase
+        .from('article_channels')
+        .select('channel_id')
+        .eq('article_id', id)
+
+      const selectedChannelIdsData = articleChannels?.map(ac => ac.channel_id) || []
+      setSelectedChannelIds(selectedChannelIdsData)
 
       // Initialiser le formulaire
       setFormData({
@@ -167,6 +186,14 @@ function ArticleDetailContent({ id }: { id: string }) {
     )
   }
 
+  const toggleChannel = (channelId: string) => {
+    setSelectedChannelIds(prev =>
+      prev.includes(channelId)
+        ? prev.filter(id => id !== channelId)
+        : [...prev, channelId]
+    )
+  }
+
   const handleSave = async () => {
     setSaving(true)
 
@@ -195,7 +222,6 @@ function ArticleDetailContent({ id }: { id: string }) {
           prix_vente: formData.prix_vente ? parseFloat(formData.prix_vente) : null,
           quantite: parseInt(formData.quantite),
           category_id: formData.category_id || null,
-          channel_id: formData.channel_id || null,
           status: formData.status,
           date_acceptation: dateAcceptation,
           date_vente: dateVente
@@ -203,6 +229,24 @@ function ArticleDetailContent({ id }: { id: string }) {
         .eq('id', id)
 
       if (error) throw error
+
+      // Supprimer les anciennes liaisons
+      await supabase
+        .from('article_channels')
+        .delete()
+        .eq('article_id', id)
+
+      // Insérer les nouvelles liaisons
+      if (selectedChannelIds.length > 0) {
+        const articleChannelsToInsert = selectedChannelIds.map(channelId => ({
+          article_id: id,
+          channel_id: channelId
+        }))
+
+        await supabase
+          .from('article_channels')
+          .insert(articleChannelsToInsert)
+      }
 
       // Delete marked photos
       for (const photoId of photosToDelete) {
@@ -646,151 +690,55 @@ function ArticleDetailContent({ id }: { id: string }) {
                     className="block text-sm font-bold uppercase mb-2"
                     style={{ color: colors.neutral[600] }}
                   >
-                    Canal de vente
+                    Canaux de vente
                   </label>
-                  <select
-                    value={formData.channel_id}
-                    onChange={(e) => {
-                      // Si on change le canal, réinitialiser le statut à "en_vente"
-                      if (e.target.value !== formData.channel_id) {
-                        setFormData({ ...formData, channel_id: e.target.value, status: 'en_vente' })
-                      } else {
-                        setFormData({ ...formData, channel_id: e.target.value })
-                      }
-                    }}
-                    className="w-full px-4 py-3 rounded-lg transition-all"
+                  <div
+                    className="rounded-lg p-4 space-y-3"
                     style={{
                       border: `2px solid ${colors.neutral[200]}`,
-                      color: colors.neutral[900]
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.primary[400]
-                      e.currentTarget.style.outline = 'none'
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.neutral[200]
+                      backgroundColor: colors.neutral[50]
                     }}
                   >
-                    <option value="">-- Aucun --</option>
                     {channels.map(channel => (
-                      <option key={channel.id} value={channel.id}>{channel.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Checkbox conditionnelle selon le canal */}
-                {(() => {
-                  const selectedChannel = channels.find(c => c.id === formData.channel_id)
-                  const channelName = selectedChannel?.name || ''
-                  // Normaliser en supprimant les accents et en minuscules
-                  const channelNameNormalized = channelName
-                    .toLowerCase()
-                    .trim()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-
-                  if (channelNameNormalized.includes('hotel') && channelNameNormalized.includes('vente')) {
-                    return (
-                      <div
-                        className="rounded-lg p-4"
+                      <label
+                        key={channel.id}
+                        className="flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all"
                         style={{
-                          backgroundColor: colors.warning.light,
-                          border: `2px solid ${colors.warning.DEFAULT}`
+                          backgroundColor: selectedChannelIds.includes(channel.id) ? colors.warning.light : '#ffffff',
+                          border: `2px solid ${selectedChannelIds.includes(channel.id) ? colors.warning.DEFAULT : colors.neutral[200]}`
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!selectedChannelIds.includes(channel.id)) {
+                            e.currentTarget.style.backgroundColor = colors.neutral[100]
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!selectedChannelIds.includes(channel.id)) {
+                            e.currentTarget.style.backgroundColor = '#ffffff'
+                          }
                         }}
                       >
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.status === 'accepte'}
-                            onChange={(e) => {
-                              setFormData({
-                                ...formData,
-                                status: e.target.checked ? 'accepte' : 'en_vente'
-                              })
-                            }}
-                            className="w-5 h-5 rounded focus:ring-2 transition-all"
-                            style={{
-                              accentColor: colors.warning.DEFAULT
-                            }}
-                          />
-                          <span
-                            className="text-base font-semibold"
-                            style={{ color: colors.warning.dark }}
-                          >
-                            Accepté par l'Hotel de vente
-                          </span>
-                        </label>
-                      </div>
-                    )
-                  } else if (channelNameNormalized.includes('bon') && channelNameNormalized.includes('coin')) {
-                    return (
-                      <div
-                        className="rounded-lg p-4"
-                        style={{
-                          backgroundColor: colors.success.light,
-                          border: `2px solid ${colors.success.DEFAULT}`
-                        }}
-                      >
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.status === 'vendu'}
-                            onChange={(e) => {
-                              setFormData({
-                                ...formData,
-                                status: e.target.checked ? 'vendu' : 'en_vente'
-                              })
-                            }}
-                            className="w-5 h-5 rounded focus:ring-2 transition-all"
-                            style={{
-                              accentColor: colors.success.DEFAULT
-                            }}
-                          />
-                          <span
-                            className="text-base font-semibold"
-                            style={{ color: colors.success.dark }}
-                          >
-                            Vendu
-                          </span>
-                        </label>
-                      </div>
-                    )
-                  } else if (formData.channel_id) {
-                    // Pour les autres canaux, afficher le dropdown de statut
-                    return (
-                      <div>
-                        <label
-                          className="block text-sm font-bold uppercase mb-2"
-                          style={{ color: colors.neutral[600] }}
-                        >
-                          Statut
-                        </label>
-                        <select
-                          value={formData.status}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                          className="w-full px-4 py-3 rounded-lg transition-all"
+                        <input
+                          type="checkbox"
+                          checked={selectedChannelIds.includes(channel.id)}
+                          onChange={() => toggleChannel(channel.id)}
+                          className="w-5 h-5 rounded focus:ring-2 transition-all"
                           style={{
-                            border: `2px solid ${colors.neutral[200]}`,
-                            color: colors.neutral[900]
+                            accentColor: colors.warning.DEFAULT
                           }}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = colors.primary[400]
-                            e.currentTarget.style.outline = 'none'
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = colors.neutral[200]
+                        />
+                        <span
+                          className="text-base font-semibold flex-1"
+                          style={{
+                            color: selectedChannelIds.includes(channel.id) ? colors.warning.dark : colors.neutral[700]
                           }}
                         >
-                          <option value="en_vente">En vente</option>
-                          <option value="accepte">Accepté</option>
-                          <option value="vendu">Vendu</option>
-                          <option value="archive">Archivé</option>
-                        </select>
-                      </div>
-                    )
-                  }
-                  return null
-                })()}
+                          {channel.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="flex gap-4 pt-4">
                   <button
@@ -964,184 +912,57 @@ function ArticleDetailContent({ id }: { id: string }) {
                   </div>
                 </div>
 
-                {article.channel_id && (
+                {selectedChannelIds.length > 0 && (
                   <div>
                     <div
                       className="text-xs font-bold uppercase mb-2"
                       style={{ color: colors.neutral[600] }}
                     >
-                      Canal de vente
+                      Canaux de vente
                     </div>
-                    <div
-                      className="text-base sm:text-lg font-semibold mb-4"
-                      style={{ color: colors.neutral[900] }}
-                    >
-                      {channels.find(c => c.id === article.channel_id)?.name || 'Non spécifié'}
-                    </div>
-
-                    {/* Checkbox conditionnelle selon le canal */}
-                    {(() => {
-                      const selectedChannel = channels.find(c => c.id === article.channel_id)
-                      if (!selectedChannel) return null
-
-                      const channelNameNormalized = selectedChannel.name
-                        .toLowerCase()
-                        .trim()
-                        .normalize('NFD')
-                        .replace(/[\u0300-\u036f]/g, '')
-
-                      const handleStatusChange = async (newStatus: 'accepte' | 'vendu' | 'en_vente') => {
-                        try {
-                          const updateData: any = {
-                            status: newStatus
-                          }
-
-                          // Gestion des dates selon le statut
-                          if (newStatus === 'accepte') {
-                            // Ajouter date d'acceptation si elle n'existe pas, supprimer date de vente
-                            if (!article.date_acceptation) {
-                              updateData.date_acceptation = new Date().toISOString()
-                            }
-                            updateData.date_vente = null
-                          } else if (newStatus === 'vendu') {
-                            // Ajouter date de vente si elle n'existe pas, supprimer date d'acceptation
-                            if (!article.date_vente) {
-                              updateData.date_vente = new Date().toISOString()
-                            }
-                            updateData.date_acceptation = null
-                          } else if (newStatus === 'en_vente') {
-                            // Supprimer les deux dates si on revient à "en_vente"
-                            updateData.date_acceptation = null
-                            updateData.date_vente = null
-                          }
-
-                          const { error } = await supabase
-                            .from('standard_articles')
-                            .update(updateData)
-                            .eq('id', id)
-
-                          if (error) throw error
-
-                          // Recharger les données
-                          await fetchData()
-                        } catch (error) {
-                          console.error('Erreur:', error)
-                          alert('Erreur lors de la mise à jour du statut')
-                        }
-                      }
-
-                      // Les checkboxes sont accessibles à tous les utilisateurs authentifiés
-                      if (channelNameNormalized.includes('hotel') && channelNameNormalized.includes('vente')) {
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {selectedChannelIds.map(channelId => {
+                        const channel = channels.find(c => c.id === channelId)
+                        if (!channel) return null
                         return (
-                          <div
-                            className="rounded-lg p-4"
+                          <span
+                            key={channelId}
+                            className="px-4 py-2 rounded-full text-sm font-semibold inline-block"
                             style={{
-                              backgroundColor: colors.warning.light,
-                              border: `2px solid ${colors.warning.DEFAULT}`
+                              backgroundColor: colors.warning.DEFAULT,
+                              color: '#ffffff'
                             }}
                           >
-                            <label className="flex items-center gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={article.status === 'accepte'}
-                                onChange={(e) => handleStatusChange(e.target.checked ? 'accepte' : 'en_vente')}
-                                className="w-5 h-5 rounded focus:ring-2 transition-all"
-                                style={{
-                                  accentColor: colors.warning.DEFAULT
-                                }}
-                              />
-                              <span
-                                className="text-base font-semibold"
-                                style={{ color: colors.warning.dark }}
-                              >
-                                Accepté par l'Hôtel de vente
-                              </span>
-                            </label>
-                          </div>
+                            {channel.name}
+                          </span>
                         )
-                      } else if (channelNameNormalized.includes('bon') && channelNameNormalized.includes('coin')) {
-                        return (
-                          <div
-                            className="rounded-lg p-4"
-                            style={{
-                              backgroundColor: colors.success.light,
-                              border: `2px solid ${colors.success.DEFAULT}`
-                            }}
-                          >
-                            <label className="flex items-center gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={article.status === 'vendu'}
-                                onChange={(e) => handleStatusChange(e.target.checked ? 'vendu' : 'en_vente')}
-                                className="w-5 h-5 rounded focus:ring-2 transition-all"
-                                style={{
-                                  accentColor: colors.success.DEFAULT
-                                }}
-                              />
-                              <span
-                                className="text-base font-semibold"
-                                style={{ color: colors.success.dark }}
-                              >
-                                Vendu
-                              </span>
-                            </label>
-                          </div>
-                        )
-                      } else {
-                        // Pour les autres canaux, afficher le badge de statut normal
-                        return (
-                          <div>
-                            <div
-                              className="text-xs font-bold uppercase mb-2"
-                              style={{ color: colors.neutral[600] }}
-                            >
-                              Statut
-                            </div>
-                            <span
-                              className="px-4 py-2 rounded-full text-sm font-semibold inline-block"
-                              style={{
-                                backgroundColor:
-                                  article.status === 'en_vente' ? colors.info.DEFAULT :
-                                  article.status === 'accepte' ? colors.warning.DEFAULT :
-                                  article.status === 'vendu' ? colors.success.DEFAULT : colors.neutral[400],
-                                color: '#ffffff'
-                              }}
-                            >
-                              {article.status === 'en_vente' ? 'En vente' :
-                               article.status === 'accepte' ? 'Accepté' :
-                               article.status === 'vendu' ? 'Vendu' : 'Archivé'}
-                            </span>
-                          </div>
-                        )
-                      }
-                    })()}
+                      })}
+                    </div>
                   </div>
                 )}
 
-                {!article.channel_id && (
-                  <div>
-                    <div
-                      className="text-xs font-bold uppercase mb-2"
-                      style={{ color: colors.neutral[600] }}
-                    >
-                      Statut
-                    </div>
-                    <span
-                      className="px-4 py-2 rounded-full text-sm font-semibold inline-block"
-                      style={{
-                        backgroundColor:
-                          article.status === 'en_vente' ? colors.info.DEFAULT :
-                          article.status === 'accepte' ? colors.warning.DEFAULT :
-                          article.status === 'vendu' ? colors.success.DEFAULT : colors.neutral[400],
-                        color: '#ffffff'
-                      }}
-                    >
-                      {article.status === 'en_vente' ? 'En vente' :
-                       article.status === 'accepte' ? 'Accepté' :
-                       article.status === 'vendu' ? 'Vendu' : 'Archivé'}
-                    </span>
+                <div>
+                  <div
+                    className="text-xs font-bold uppercase mb-2"
+                    style={{ color: colors.neutral[600] }}
+                  >
+                    Statut
                   </div>
-                )}
+                  <span
+                    className="px-4 py-2 rounded-full text-sm font-semibold inline-block"
+                    style={{
+                      backgroundColor:
+                        article.status === 'en_vente' ? colors.info.DEFAULT :
+                        article.status === 'accepte' ? colors.warning.DEFAULT :
+                        article.status === 'vendu' ? colors.success.DEFAULT : colors.neutral[400],
+                      color: '#ffffff'
+                    }}
+                  >
+                    {article.status === 'en_vente' ? 'En vente' :
+                     article.status === 'accepte' ? 'Accepté' :
+                     article.status === 'vendu' ? 'Vendu' : 'Archivé'}
+                  </span>
+                </div>
 
                 <div
                   className="pt-6 mt-6"

@@ -29,13 +29,106 @@ function VinsContent() {
 
   async function fetchVins() {
     try {
-      const { data, error } = await supabase
-        .from('vins')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const { data: { user } } = await supabase.auth.getUser()
 
-      if (error) throw error
-      setVins(data || [])
+      if (!user) {
+        setVins([])
+        setLoading(false)
+        return
+      }
+
+      // Récupérer le profil pour vérifier le rôle
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = profileData?.role
+
+      // Si admin, récupérer tous les vins
+      if (userRole === 'admin') {
+        const { data: vinsData, error: vinsError } = await supabase
+          .from('vins')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (vinsError) throw vinsError
+
+        // Compter les bouteilles pour chaque vin
+        const vinsWithCount = await Promise.all(
+          (vinsData || []).map(async (vin) => {
+            const { count } = await supabase
+              .from('bouteilles')
+              .select('*', { count: 'exact', head: true })
+              .eq('vin_id', vin.id)
+
+            return {
+              ...vin,
+              nombre_bouteilles: count || 0
+            }
+          })
+        )
+
+        setVins(vinsWithCount)
+      } else {
+        // Pour les non-admins, filtrer par canaux assignés
+
+        // 1. Récupérer les canaux de l'utilisateur
+        const { data: userChannelsData } = await supabase
+          .from('user_channels')
+          .select('channel_id')
+          .eq('user_id', user.id)
+
+        const userChannelIds = userChannelsData?.map(uc => uc.channel_id) || []
+
+        if (userChannelIds.length === 0) {
+          // L'utilisateur n'a aucun canal assigné, ne voir aucun vin
+          setVins([])
+          setLoading(false)
+          return
+        }
+
+        // 2. Récupérer les vins associés à ces canaux via la table vin_channels
+        const { data: vinChannelsData } = await supabase
+          .from('vin_channels')
+          .select('vin_id')
+          .in('channel_id', userChannelIds)
+
+        const vinIds = [...new Set(vinChannelsData?.map(vc => vc.vin_id) || [])]
+
+        if (vinIds.length === 0) {
+          setVins([])
+          setLoading(false)
+          return
+        }
+
+        // 3. Récupérer les vins filtrés
+        const { data: vinsData, error: vinsError } = await supabase
+          .from('vins')
+          .select('*')
+          .in('id', vinIds)
+          .order('created_at', { ascending: false })
+
+        if (vinsError) throw vinsError
+
+        // Compter les bouteilles pour chaque vin
+        const vinsWithCount = await Promise.all(
+          (vinsData || []).map(async (vin) => {
+            const { count } = await supabase
+              .from('bouteilles')
+              .select('*', { count: 'exact', head: true })
+              .eq('vin_id', vin.id)
+
+            return {
+              ...vin,
+              nombre_bouteilles: count || 0
+            }
+          })
+        )
+
+        setVins(vinsWithCount)
+      }
     } catch (error) {
       console.error('Erreur:', error)
     } finally {
@@ -273,6 +366,16 @@ function VinsContent() {
                         {vin.producteur}
                       </p>
                     )}
+
+                    {/* Nombre de bouteilles */}
+                    <div className="mb-3">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-bold rounded-lg" style={{
+                        backgroundColor: colors.accent[100],
+                        color: colors.accent[700]
+                      }}>
+                        🍾 {vin.nombre_bouteilles ?? 0} bouteille{(vin.nombre_bouteilles ?? 0) > 1 ? 's' : ''}
+                      </span>
+                    </div>
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2 mt-auto">

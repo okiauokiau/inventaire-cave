@@ -34,7 +34,7 @@ export default function ModifierVin() {
     degre_alcool: '',
     volume_bouteille: '',
     commentaire_general: '',
-    channel_id: '',
+    selectedChannelIds: [] as string[],
     status: 'en_vente' as 'en_vente' | 'accepte' | 'vendu' | 'archive',
   })
 
@@ -53,6 +53,23 @@ export default function ModifierVin() {
       if (error) throw error
 
       setVin(data)
+
+      // Charger les canaux de vente
+      const { data: channelsData } = await supabase
+        .from('sales_channels')
+        .select('*')
+        .order('name')
+
+      setChannels(channelsData || [])
+
+      // Récupérer les canaux assignés au vin
+      const { data: vinChannels } = await supabase
+        .from('vin_channels')
+        .select('channel_id')
+        .eq('vin_id', id)
+
+      const selectedChannelIds = vinChannels?.map(vc => vc.channel_id) || []
+
       setFormData({
         nom: data.nom || '',
         producteur: data.producteur || '',
@@ -65,7 +82,7 @@ export default function ModifierVin() {
         degre_alcool: data.degre_alcool?.toString() || '',
         volume_bouteille: data.volume_bouteille || '',
         commentaire_general: data.commentaire_general || '',
-        channel_id: data.channel_id || '',
+        selectedChannelIds: selectedChannelIds,
         status: data.status || 'en_vente',
       })
 
@@ -77,14 +94,6 @@ export default function ModifierVin() {
         .order('ordre', { ascending: true })
 
       setPhotos(photosData || [])
-
-      // Charger les canaux de vente
-      const { data: channelsData } = await supabase
-        .from('sales_channels')
-        .select('*')
-        .order('name')
-
-      setChannels(channelsData || [])
 
       // Charger tous les tags
       const { data: tagsData } = await supabase
@@ -111,17 +120,18 @@ export default function ModifierVin() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+  }
 
-    // Si on change le canal de vente, réinitialiser le statut à "en_vente"
-    if (name === 'channel_id' && value !== formData.channel_id) {
-      setFormData({
-        ...formData,
-        [name]: value,
-        status: 'en_vente'
-      })
-    } else {
-      setFormData({ ...formData, [name]: value })
-    }
+  const toggleChannel = (channelId: string) => {
+    const newSelectedChannels = formData.selectedChannelIds.includes(channelId)
+      ? formData.selectedChannelIds.filter(id => id !== channelId)
+      : [...formData.selectedChannelIds, channelId]
+
+    setFormData({
+      ...formData,
+      selectedChannelIds: newSelectedChannels
+    })
   }
 
   const toggleTag = (tagId: string) => {
@@ -237,7 +247,6 @@ export default function ModifierVin() {
           degre_alcool: formData.degre_alcool ? parseFloat(formData.degre_alcool) : null,
           volume_bouteille: formData.volume_bouteille || null,
           commentaire_general: formData.commentaire_general || null,
-          channel_id: formData.channel_id || null,
           status: formData.status,
           date_acceptation: dateAcceptation,
           date_vente: dateVente,
@@ -246,6 +255,25 @@ export default function ModifierVin() {
         .eq('id', id)
 
       if (vinError) throw vinError
+
+      // Mettre à jour les canaux de vente
+      // Supprimer les anciennes liaisons
+      await supabase
+        .from('vin_channels')
+        .delete()
+        .eq('vin_id', id)
+
+      // Insérer les nouvelles liaisons
+      if (formData.selectedChannelIds.length > 0) {
+        const vinChannelsToInsert = formData.selectedChannelIds.map(channelId => ({
+          vin_id: id,
+          channel_id: channelId
+        }))
+
+        await supabase
+          .from('vin_channels')
+          .insert(vinChannelsToInsert)
+      }
 
       // Mettre à jour les tags
       // Supprimer les anciens tags
@@ -506,111 +534,34 @@ export default function ModifierVin() {
             </div>
           </div>
 
-          {/* Canal de vente et statut - CYAN */}
+          {/* Canaux de vente - CYAN */}
           <div className="bg-gradient-to-br from-white to-cyan-50 rounded-3xl shadow-2xl p-8 border-4 border-cyan-200">
             <h2 className="text-3xl font-black text-cyan-900 mb-6 flex items-center gap-3">
               <span className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
                 🏪
               </span>
-              Vente & Distribution
+              Canaux de vente
             </h2>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-cyan-800 font-bold mb-3 text-xl">Canal de vente</label>
-                <select
-                  name="channel_id"
-                  value={formData.channel_id}
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 bg-white border-3 border-cyan-300 rounded-2xl focus:border-cyan-600 focus:ring-4 focus:ring-cyan-200 focus:outline-none transition text-lg"
-                >
-                  <option value="">-- Aucun canal --</option>
-                  {channels.map(channel => (
-                    <option key={channel.id} value={channel.id}>{channel.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Checkbox conditionnelle selon le canal */}
-              {(() => {
-                const selectedChannel = channels.find(c => c.id === formData.channel_id)
-                const channelName = selectedChannel?.name || ''
-                // Normaliser en supprimant les accents et en minuscules
-                const channelNameNormalized = channelName
-                  .toLowerCase()
-                  .trim()
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')
-
-                // Debug
-                console.log('Selected channel:', selectedChannel)
-                console.log('Channel name:', channelName)
-                console.log('Channel name normalized:', channelNameNormalized)
-                console.log('formData.channel_id:', formData.channel_id)
-
-                if (channelNameNormalized.includes('hotel') && channelNameNormalized.includes('vente')) {
-                  return (
-                    <div className="bg-white rounded-2xl p-6 border-3 border-cyan-300">
-                      <label className="flex items-center gap-4 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.status === 'accepte'}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              status: e.target.checked ? 'accepte' : 'en_vente'
-                            })
-                          }}
-                          className="w-6 h-6 text-cyan-600 rounded focus:ring-cyan-500"
-                        />
-                        <span className="text-lg font-bold text-cyan-900">
-                          ✓ Accepté par l'Hotel de vente
-                        </span>
-                      </label>
-                    </div>
-                  )
-                } else if (channelNameNormalized.includes('bon') && channelNameNormalized.includes('coin')) {
-                  return (
-                    <div className="bg-white rounded-2xl p-6 border-3 border-cyan-300">
-                      <label className="flex items-center gap-4 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.status === 'vendu'}
-                          onChange={(e) => {
-                            setFormData({
-                              ...formData,
-                              status: e.target.checked ? 'vendu' : 'en_vente'
-                            })
-                          }}
-                          className="w-6 h-6 text-cyan-600 rounded focus:ring-cyan-500"
-                        />
-                        <span className="text-lg font-bold text-cyan-900">
-                          ✓ Vendu
-                        </span>
-                      </label>
-                    </div>
-                  )
-                } else if (formData.channel_id) {
-                  // Pour les autres canaux, afficher le dropdown de statut
-                  return (
-                    <div>
-                      <label className="block text-cyan-800 font-bold mb-3 text-xl">Statut</label>
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        className="w-full px-5 py-4 bg-white border-3 border-cyan-300 rounded-2xl focus:border-cyan-600 focus:ring-4 focus:ring-cyan-200 focus:outline-none transition text-lg"
-                      >
-                        <option value="en_vente">En vente</option>
-                        <option value="accepte">Accepté</option>
-                        <option value="vendu">Vendu</option>
-                        <option value="archive">Archivé</option>
-                      </select>
-                    </div>
-                  )
-                }
-                return null
-              })()}
+            <div className="space-y-4">
+              {channels.length === 0 ? (
+                <p className="text-cyan-700 italic">Aucun canal de vente disponible</p>
+              ) : (
+                channels.map(channel => (
+                  <label
+                    key={channel.id}
+                    className="flex items-center gap-4 bg-white p-5 rounded-2xl border-3 border-cyan-200 hover:border-cyan-400 cursor-pointer transition-all hover:shadow-lg"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.selectedChannelIds.includes(channel.id)}
+                      onChange={() => toggleChannel(channel.id)}
+                      className="w-6 h-6 text-cyan-600 rounded focus:ring-cyan-500"
+                    />
+                    <span className="text-lg font-bold text-cyan-900">{channel.name}</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
 

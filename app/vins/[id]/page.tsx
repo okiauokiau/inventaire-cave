@@ -19,6 +19,7 @@ export default function VinDetail() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [bouteilles, setBouteilles] = useState<Bouteille[]>([])
   const [channel, setChannel] = useState<{ id: string; name: string } | null>(null)
+  const [channels, setChannels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number | null>(null)
 
@@ -66,6 +67,22 @@ export default function VinDetail() {
 
         setChannel(channelData)
       }
+
+      // Récupérer les canaux assignés au vin
+      const { data: vinChannels } = await supabase
+        .from('vin_channels')
+        .select(`
+          channel_id,
+          sales_channels (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq('vin_id', id)
+
+      const channelsData = vinChannels?.map(vc => vc.sales_channels).filter(Boolean) || []
+      setChannels(channelsData)
 
       const { data: photosData } = await supabase
         .from('photos')
@@ -545,6 +562,35 @@ export default function VinDetail() {
                 </div>
               )}
             </div>
+
+            {/* Canaux de vente */}
+            {channels.length > 0 && (
+              <div
+                className="mt-6 pt-6"
+                style={{ borderTop: `2px solid ${colors.neutral[200]}` }}
+              >
+                <div
+                  className="text-xs font-bold uppercase mb-3"
+                  style={{ color: colors.neutral[600] }}
+                >
+                  Canaux de vente
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {channels.map((ch: any) => (
+                    <span
+                      key={ch.id}
+                      className="px-4 py-2 rounded-full text-sm font-semibold"
+                      style={{
+                        backgroundColor: '#fed7aa',
+                        color: '#c2410c'
+                      }}
+                    >
+                      {ch.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Dates d'acceptation et de vente */}
             {(vin.date_acceptation || vin.date_vente) && (

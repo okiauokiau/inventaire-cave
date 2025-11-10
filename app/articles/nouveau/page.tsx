@@ -42,7 +42,7 @@ function NouvelArticleContent() {
     prix_vente: '',
     quantite: '1',
     category_id: '',
-    channel_id: '',
+    selectedChannelIds: [] as string[],
     status: 'en_vente' as const
   })
 
@@ -104,7 +104,6 @@ function NouvelArticleContent() {
             prix_vente: formData.prix_vente ? parseFloat(formData.prix_vente) : null,
             quantite: parseInt(formData.quantite),
             category_id: formData.category_id || null,
-            channel_id: formData.channel_id || null,
             status: formData.status,
             created_by: user?.id
           }
@@ -113,6 +112,20 @@ function NouvelArticleContent() {
         .single()
 
       if (articleError) throw articleError
+
+      // Insérer les canaux sélectionnés
+      if (formData.selectedChannelIds.length > 0) {
+        const articleChannelsToInsert = formData.selectedChannelIds.map(channelId => ({
+          article_id: article.id,
+          channel_id: channelId
+        }))
+
+        const { error: channelsError } = await supabase
+          .from('article_channels')
+          .insert(articleChannelsToInsert)
+
+        if (channelsError) throw channelsError
+      }
 
       // 2. Uploader les images
       if (selectedImages.length > 0) {
@@ -163,6 +176,15 @@ function NouvelArticleContent() {
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const toggleChannel = (channelId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedChannelIds: prev.selectedChannelIds.includes(channelId)
+        ? prev.selectedChannelIds.filter(id => id !== channelId)
+        : [...prev.selectedChannelIds, channelId]
+    }))
   }
 
   return (
@@ -286,23 +308,33 @@ function NouvelArticleContent() {
               />
             </div>
 
-            {/* Canal de vente */}
+            {/* Canaux de vente */}
             <div>
-              <label htmlFor="channel_id" className="block text-sm font-medium text-gray-700 mb-2">
-                Canal de vente
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Canaux de vente
               </label>
-              <select
-                id="channel_id"
-                name="channel_id"
-                value={formData.channel_id}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-700 focus:border-transparent"
-              >
-                <option value="">-- Sélectionner un canal --</option>
-                {channels.map(channel => (
-                  <option key={channel.id} value={channel.id}>{channel.name}</option>
-                ))}
-              </select>
+              <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white">
+                {channels.length === 0 ? (
+                  <p className="text-gray-500 italic">Aucun canal disponible</p>
+                ) : (
+                  <div className="space-y-2">
+                    {channels.map(channel => (
+                      <label
+                        key={channel.id}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedChannelIds.includes(channel.id)}
+                          onChange={() => toggleChannel(channel.id)}
+                          className="w-4 h-4 text-green-700 border-gray-300 rounded focus:ring-green-700 focus:ring-2 cursor-pointer"
+                        />
+                        <span className="font-medium text-gray-900">{channel.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Statut */}

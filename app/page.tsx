@@ -49,32 +49,115 @@ function DashboardContent() {
 
   async function fetchStats() {
     try {
-      // Statistiques sur les vins
-      const { data: vinsData } = await supabase
-        .from('vins')
-        .select('status', { count: 'exact' })
+      if (!profile?.id) return
 
-      const totalVins = vinsData?.length || 0
-      const vinsEnVente = vinsData?.filter(v => v.status === 'en_vente' || !v.status).length || 0
-      const vinsAcceptes = vinsData?.filter(v => v.status === 'accepte').length || 0
-      const vinsVendus = vinsData?.filter(v => v.status === 'vendu').length || 0
+      // Récupérer le rôle de l'utilisateur
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', profile.id)
+        .single()
 
-      // Statistiques sur les articles (si la table existe)
-      const { data: articlesData } = await supabase
-        .from('standard_articles')
-        .select('status', { count: 'exact' })
-        .throwOnError()
-        .then(res => res)
-        .catch(() => ({ data: null }))
+      const userRole = profileData?.role
 
-      const totalArticles = articlesData?.length || 0
-      const articlesEnVente = articlesData?.filter(a => a.status === 'en_vente' || !a.status).length || 0
-      const articlesAcceptes = articlesData?.filter(a => a.status === 'accepte').length || 0
-      const articlesVendus = articlesData?.filter(a => a.status === 'vendu').length || 0
+      // Récupérer les canaux de l'utilisateur si non-admin
+      let userChannelIds: string[] = []
+      if (userRole !== 'admin') {
+        const { data: userChannelsData } = await supabase
+          .from('user_channels')
+          .select('channel_id')
+          .eq('user_id', profile.id)
+
+        userChannelIds = userChannelsData?.map(uc => uc.channel_id) || []
+      }
+
+      // Compter les vins
+      let totalVins = 0
+      let vinsData: Array<{ status: string | null }> = []
+
+      if (userRole === 'admin') {
+        // Admin : compter tous les vins
+        const { data } = await supabase
+          .from('vins')
+          .select('status', { count: 'exact' })
+
+        vinsData = data || []
+        totalVins = vinsData.length
+      } else {
+        // Non-admin : compter uniquement les vins des canaux assignés
+        if (userChannelIds.length > 0) {
+          // Récupérer les IDs de vins associés à ces canaux
+          const { data: vinChannelsData } = await supabase
+            .from('vin_channels')
+            .select('vin_id')
+            .in('channel_id', userChannelIds)
+
+          const vinIds = [...new Set(vinChannelsData?.map(vc => vc.vin_id) || [])]
+
+          if (vinIds.length > 0) {
+            const { data } = await supabase
+              .from('vins')
+              .select('status')
+              .in('id', vinIds)
+
+            vinsData = data || []
+            totalVins = vinsData.length
+          }
+        }
+      }
+
+      const vinsEnVente = vinsData.filter(v => v.status === 'en_vente' || !v.status).length
+      const vinsAcceptes = vinsData.filter(v => v.status === 'accepte').length
+      const vinsVendus = vinsData.filter(v => v.status === 'vendu').length
+
+      // Compter les articles standards
+      let totalArticles = 0
+      let articlesData: Array<{ status: string | null }> = []
+
+      if (userRole === 'admin') {
+        // Admin : compter tous les articles
+        const { data } = await supabase
+          .from('standard_articles')
+          .select('status', { count: 'exact' })
+          .throwOnError()
+          .then(res => res)
+          .catch(() => ({ data: null }))
+
+        articlesData = data || []
+        totalArticles = articlesData.length
+      } else {
+        // Non-admin : compter uniquement les articles des canaux assignés
+        if (userChannelIds.length > 0) {
+          // Récupérer les IDs d'articles associés à ces canaux
+          const { data: articleChannelsData } = await supabase
+            .from('article_channels')
+            .select('article_id')
+            .in('channel_id', userChannelIds)
+
+          const articleIds = [...new Set(articleChannelsData?.map(ac => ac.article_id) || [])]
+
+          if (articleIds.length > 0) {
+            const { data } = await supabase
+              .from('standard_articles')
+              .select('status')
+              .in('id', articleIds)
+              .throwOnError()
+              .then(res => res)
+              .catch(() => ({ data: null }))
+
+            articlesData = data || []
+            totalArticles = articlesData.length
+          }
+        }
+      }
+
+      const articlesEnVente = articlesData.filter(a => a.status === 'en_vente' || !a.status).length
+      const articlesAcceptes = articlesData.filter(a => a.status === 'accepte').length
+      const articlesVendus = articlesData.filter(a => a.status === 'vendu').length
 
       // Statistiques sur les utilisateurs (admin uniquement)
       let totalUsers = 0
-      if (profile?.role === 'admin') {
+      if (userRole === 'admin') {
         const { count } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
@@ -154,7 +237,7 @@ function DashboardContent() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base sm:text-lg font-semibold" style={{ color: colors.neutral[700] }}>
-                    Vins
+                    Fiches de vin
                   </h3>
                   <div style={{
                     backgroundColor: colors.accent[50],

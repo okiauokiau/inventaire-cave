@@ -21,7 +21,14 @@ type Category = {
   created_at: string
 }
 
-type ActiveTab = 'tags' | 'categories'
+type SalesChannel = {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+}
+
+type ActiveTab = 'tags' | 'categories' | 'channels' | 'bulk_channels'
 
 export default function ParametragePage() {
   return (
@@ -36,6 +43,7 @@ function ParametrageContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('tags')
   const [tags, setTags] = useState<Tag[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [channels, setChannels] = useState<SalesChannel[]>([])
   const [loading, setLoading] = useState(true)
 
   // États pour Tags
@@ -56,6 +64,23 @@ function ParametrageContent() {
   const [editingCategoryDescription, setEditingCategoryDescription] = useState('')
   const [editingCategoryColor, setEditingCategoryColor] = useState('#10b981')
 
+  // États pour Canaux de vente
+  const [creatingChannel, setCreatingChannel] = useState(false)
+  const [editingChannel, setEditingChannel] = useState<string | null>(null)
+  const [newChannelName, setNewChannelName] = useState('')
+  const [newChannelDescription, setNewChannelDescription] = useState('')
+  const [editingChannelName, setEditingChannelName] = useState('')
+  const [editingChannelDescription, setEditingChannelDescription] = useState('')
+
+  // États pour Affectation en masse
+  const [bulkMode, setBulkMode] = useState<'vins' | 'articles'>('vins')
+  const [vins, setVins] = useState<any[]>([])
+  const [articles, setArticles] = useState<any[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([])
+  const [bulkAction, setBulkAction] = useState<'add' | 'remove'>('add')
+  const [loadingBulk, setLoadingBulk] = useState(false)
+
   const colorPresets = [
     { name: 'Bleu', value: '#3b82f6' },
     { name: 'Vert', value: '#10b981' },
@@ -70,6 +95,12 @@ function ParametrageContent() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'bulk_channels') {
+      fetchBulkData()
+    }
+  }, [activeTab, bulkMode])
 
   async function fetchData() {
     try {
@@ -90,6 +121,15 @@ function ParametrageContent() {
 
       if (categoriesError) throw categoriesError
       setCategories(categoriesData || [])
+
+      // Charger les canaux de vente
+      const { data: channelsData, error: channelsError } = await supabase
+        .from('sales_channels')
+        .select('*')
+        .order('name')
+
+      if (channelsError) throw channelsError
+      setChannels(channelsData || [])
     } catch (error) {
       console.error('Erreur:', error)
     } finally {
@@ -247,6 +287,224 @@ function ParametrageContent() {
     }
   }
 
+  // ===== GESTION DES CANAUX DE VENTE =====
+  const handleCreateChannel = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newChannelName.trim()) return
+
+    try {
+      const { error } = await supabase
+        .from('sales_channels')
+        .insert([{
+          name: newChannelName.trim(),
+          description: newChannelDescription.trim() || null,
+          created_by: user?.id
+        }])
+
+      if (error) throw error
+
+      setNewChannelName('')
+      setNewChannelDescription('')
+      setCreatingChannel(false)
+      await fetchData()
+      alert('Canal de vente créé avec succès')
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Erreur lors de la création du canal de vente')
+    }
+  }
+
+  const handleEditChannel = (channel: SalesChannel) => {
+    setEditingChannel(channel.id)
+    setEditingChannelName(channel.name)
+    setEditingChannelDescription(channel.description || '')
+  }
+
+  const handleSaveChannel = async (channelId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sales_channels')
+        .update({
+          name: editingChannelName.trim(),
+          description: editingChannelDescription.trim() || null
+        })
+        .eq('id', channelId)
+
+      if (error) throw error
+
+      setEditingChannel(null)
+      await fetchData()
+      alert('Canal de vente mis à jour avec succès')
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Erreur lors de la mise à jour du canal de vente')
+    }
+  }
+
+  const handleDeleteChannel = async (channelId: string, channelName: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le canal de vente "${channelName}" ?\n\nAttention : ce canal sera supprimé de tous les articles et vins associés.`)) return
+
+    try {
+      const { error } = await supabase
+        .from('sales_channels')
+        .delete()
+        .eq('id', channelId)
+
+      if (error) throw error
+
+      await fetchData()
+      alert('Canal de vente supprimé avec succès')
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Erreur lors de la suppression du canal de vente')
+    }
+  }
+
+  // ===== GESTION AFFECTATION EN MASSE =====
+  async function fetchBulkData() {
+    setLoadingBulk(true)
+    try {
+      if (bulkMode === 'vins') {
+        // Charger les vins avec leurs canaux
+        const { data: vinsData } = await supabase
+          .from('vins')
+          .select('id, nom, appellation')
+          .order('nom')
+
+        if (vinsData) {
+          // Charger les canaux pour chaque vin
+          const vinsWithChannels = await Promise.all(
+            vinsData.map(async (vin) => {
+              const { data: vinChannels } = await supabase
+                .from('vin_channels')
+                .select(`
+                  channel_id,
+                  sales_channels (id, name)
+                `)
+                .eq('vin_id', vin.id)
+
+              return {
+                ...vin,
+                channels: vinChannels?.map(vc => vc.sales_channels).filter(Boolean) || []
+              }
+            })
+          )
+          setVins(vinsWithChannels)
+        }
+      } else {
+        // Charger les articles avec leurs canaux
+        const { data: articlesData } = await supabase
+          .from('standard_articles')
+          .select('id, nom, description')
+          .order('nom')
+
+        if (articlesData) {
+          // Charger les canaux pour chaque article
+          const articlesWithChannels = await Promise.all(
+            articlesData.map(async (article) => {
+              const { data: articleChannels } = await supabase
+                .from('article_channels')
+                .select(`
+                  channel_id,
+                  sales_channels (id, name)
+                `)
+                .eq('article_id', article.id)
+
+              return {
+                ...article,
+                channels: articleChannels?.map(ac => ac.sales_channels).filter(Boolean) || []
+              }
+            })
+          )
+          setArticles(articlesWithChannels)
+        }
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Erreur lors du chargement des données')
+    } finally {
+      setLoadingBulk(false)
+    }
+  }
+
+  function handleSelectAll() {
+    const items = bulkMode === 'vins' ? vins : articles
+    setSelectedIds(items.map(item => item.id))
+  }
+
+  function handleDeselectAll() {
+    setSelectedIds([])
+  }
+
+  function handleToggleSelect(id: string) {
+    setSelectedIds(prev =>
+      prev.includes(id)
+        ? prev.filter(itemId => itemId !== id)
+        : [...prev, id]
+    )
+  }
+
+  async function handleApplyBulkChannels() {
+    if (selectedIds.length === 0) {
+      alert('Veuillez sélectionner au moins une fiche')
+      return
+    }
+    if (selectedChannelIds.length === 0) {
+      alert('Veuillez sélectionner au moins un canal')
+      return
+    }
+
+    const confirmMsg = bulkAction === 'add'
+      ? `Ajouter ${selectedChannelIds.length} canal(ux) à ${selectedIds.length} fiche(s) ?`
+      : `Retirer ${selectedChannelIds.length} canal(ux) de ${selectedIds.length} fiche(s) ?`
+
+    if (!confirm(confirmMsg)) return
+
+    setLoadingBulk(true)
+    try {
+      const tableName = bulkMode === 'vins' ? 'vin_channels' : 'article_channels'
+      const idField = bulkMode === 'vins' ? 'vin_id' : 'article_id'
+
+      if (bulkAction === 'add') {
+        // Ajouter les canaux
+        const insertData = []
+        for (const itemId of selectedIds) {
+          for (const channelId of selectedChannelIds) {
+            insertData.push({
+              [idField]: itemId,
+              channel_id: channelId
+            })
+          }
+        }
+
+        const { error } = await supabase
+          .from(tableName)
+          .upsert(insertData, { onConflict: `${idField},channel_id` })
+
+        if (error) throw error
+      } else {
+        // Retirer les canaux
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .in(idField, selectedIds)
+          .in('channel_id', selectedChannelIds)
+
+        if (error) throw error
+      }
+
+      alert('Affectation appliquée avec succès')
+      setSelectedIds([])
+      setSelectedChannelIds([])
+      await fetchBulkData()
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Erreur lors de l\'application de l\'affectation')
+    } finally {
+      setLoadingBulk(false)
+    }
+  }
+
   if (loading) {
     return (
       <>
@@ -292,6 +550,26 @@ function ParametrageContent() {
               }`}
             >
               📁 Catégories
+            </button>
+            <button
+              onClick={() => setActiveTab('channels')}
+              className={`px-6 py-3 font-semibold transition ${
+                activeTab === 'channels'
+                  ? 'border-b-4 border-orange-600 text-orange-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🛒 Canaux de vente
+            </button>
+            <button
+              onClick={() => setActiveTab('bulk_channels')}
+              className={`px-6 py-3 font-semibold transition ${
+                activeTab === 'bulk_channels'
+                  ? 'border-b-4 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              ⚡ Affectation en masse
             </button>
           </div>
         </div>
@@ -687,6 +965,395 @@ function ParametrageContent() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'channels' && (
+            <div>
+              {/* Bouton créer canal */}
+              <div className="mb-6 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">Gestion des Canaux de vente</h2>
+                <button
+                  onClick={() => setCreatingChannel(true)}
+                  className="bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-700 transition"
+                >
+                  + Nouveau canal
+                </button>
+              </div>
+
+              {/* Formulaire création canal */}
+              {creatingChannel && (
+                <div className="bg-white rounded-lg shadow p-6 mb-8">
+                  <h3 className="text-xl font-bold mb-4">Créer un nouveau canal de vente</h3>
+                  <form onSubmit={handleCreateChannel} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom du canal <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newChannelName}
+                        onChange={(e) => setNewChannelName(e.target.value)}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-600 focus:border-transparent"
+                        placeholder="Ex: Boutique en ligne, Vente directe, Revendeur..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={newChannelDescription}
+                        onChange={(e) => setNewChannelDescription(e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-600 focus:border-transparent"
+                        placeholder="Description optionnelle..."
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        type="submit"
+                        className="px-6 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700"
+                      >
+                        Créer le canal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreatingChannel(false)
+                          setNewChannelName('')
+                          setNewChannelDescription('')
+                        }}
+                        className="px-6 py-2 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-100"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Stats canaux */}
+              <div className="bg-white rounded-lg shadow p-6 mb-8">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Total de canaux</h3>
+                <p className="text-3xl font-bold text-orange-600">{channels.length}</p>
+              </div>
+
+              {/* Liste des canaux */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {channels.map(channel => (
+                  <div key={channel.id} className="bg-white rounded-lg shadow p-6">
+                    {editingChannel === channel.id ? (
+                      /* MODE ÉDITION CANAL */
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={editingChannelName}
+                          onChange={(e) => setEditingChannelName(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg text-lg font-semibold"
+                        />
+
+                        <textarea
+                          value={editingChannelDescription}
+                          onChange={(e) => setEditingChannelDescription(e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border rounded-lg text-sm"
+                          placeholder="Description..."
+                        />
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveChannel(channel.id)}
+                            className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                          >
+                            ✓ Sauver
+                          </button>
+                          <button
+                            onClick={() => setEditingChannel(null)}
+                            className="flex-1 px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                          >
+                            ✕ Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* MODE LECTURE CANAL */
+                      <>
+                        <div className="mb-4">
+                          <span className="px-4 py-2 rounded-lg text-sm font-semibold text-white inline-block bg-orange-600">
+                            {channel.name}
+                          </span>
+                        </div>
+
+                        {channel.description && (
+                          <p className="text-sm text-gray-600 mb-4">{channel.description}</p>
+                        )}
+
+                        <div className="text-sm text-gray-500 mb-4">
+                          Créé le {new Date(channel.created_at).toLocaleDateString('fr-FR')}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditChannel(channel)}
+                            className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                          >
+                            ✏️ Modifier
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChannel(channel.id, channel.name)}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {channels.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-lg shadow">
+                  <p className="text-xl text-gray-500 mb-4">Aucun canal de vente créé</p>
+                  <button
+                    onClick={() => setCreatingChannel(true)}
+                    className="text-orange-600 hover:underline font-semibold"
+                  >
+                    Créer votre premier canal
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'bulk_channels' && (
+            <div>
+              {/* Header */}
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Affectation en masse des canaux</h2>
+                <p className="text-gray-600">Attribuez ou retirez des canaux de vente à plusieurs fiches en une seule fois</p>
+              </div>
+
+              {/* Mode selection */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Type de fiches</label>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      setBulkMode('vins')
+                      setSelectedIds([])
+                    }}
+                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
+                      bulkMode === 'vins'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    🍷 Fiches de vin
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBulkMode('articles')
+                      setSelectedIds([])
+                    }}
+                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
+                      bulkMode === 'articles'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    📦 Fiches d'articles standards
+                  </button>
+                </div>
+              </div>
+
+              {/* Action selection */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Action à effectuer</label>
+                <div className="flex gap-4 mb-6">
+                  <button
+                    onClick={() => setBulkAction('add')}
+                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
+                      bulkAction === 'add'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    ➕ Ajouter des canaux
+                  </button>
+                  <button
+                    onClick={() => setBulkAction('remove')}
+                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
+                      bulkAction === 'remove'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    ➖ Retirer des canaux
+                  </button>
+                </div>
+
+                {/* Channel selection */}
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Canaux à {bulkAction === 'add' ? 'ajouter' : 'retirer'}
+                </label>
+                <div className="flex flex-wrap gap-3 mb-6">
+                  {channels.map(channel => (
+                    <label
+                      key={channel.id}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition"
+                      style={{
+                        borderColor: selectedChannelIds.includes(channel.id) ? '#f97316' : '#e5e7eb',
+                        backgroundColor: selectedChannelIds.includes(channel.id) ? '#fed7aa' : 'white'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedChannelIds.includes(channel.id)}
+                        onChange={() => {
+                          setSelectedChannelIds(prev =>
+                            prev.includes(channel.id)
+                              ? prev.filter(id => id !== channel.id)
+                              : [...prev, channel.id]
+                          )
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="font-medium">{channel.name}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Apply button */}
+                <button
+                  onClick={handleApplyBulkChannels}
+                  disabled={loadingBulk || selectedIds.length === 0 || selectedChannelIds.length === 0}
+                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                >
+                  {loadingBulk ? 'Application en cours...' : `Appliquer à ${selectedIds.length} fiche(s) sélectionnée(s)`}
+                </button>
+              </div>
+
+              {/* Items list */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {bulkMode === 'vins' ? `Fiches de vin (${vins.length})` : `Articles standards (${articles.length})`}
+                  </h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSelectAll}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm font-semibold"
+                    >
+                      Tout sélectionner
+                    </button>
+                    <button
+                      onClick={handleDeselectAll}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm font-semibold"
+                    >
+                      Tout désélectionner
+                    </button>
+                  </div>
+                </div>
+
+                {loadingBulk ? (
+                  <div className="text-center py-8 text-gray-500">Chargement...</div>
+                ) : (
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                    {bulkMode === 'vins' && vins.map(vin => (
+                      <label
+                        key={vin.id}
+                        className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+                        style={{
+                          borderColor: selectedIds.includes(vin.id) ? '#3b82f6' : '#e5e7eb',
+                          backgroundColor: selectedIds.includes(vin.id) ? '#eff6ff' : 'white'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(vin.id)}
+                          onChange={() => handleToggleSelect(vin.id)}
+                          className="w-5 h-5 mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900">{vin.nom}</div>
+                          {vin.appellation && (
+                            <div className="text-sm text-gray-600">{vin.appellation}</div>
+                          )}
+                          {vin.channels && vin.channels.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {vin.channels.map((channel: any) => (
+                                <span
+                                  key={channel.id}
+                                  className="px-2 py-1 rounded text-xs font-medium"
+                                  style={{
+                                    backgroundColor: '#fed7aa',
+                                    color: '#c2410c'
+                                  }}
+                                >
+                                  {channel.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+
+                    {bulkMode === 'articles' && articles.map(article => (
+                      <label
+                        key={article.id}
+                        className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+                        style={{
+                          borderColor: selectedIds.includes(article.id) ? '#3b82f6' : '#e5e7eb',
+                          backgroundColor: selectedIds.includes(article.id) ? '#eff6ff' : 'white'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(article.id)}
+                          onChange={() => handleToggleSelect(article.id)}
+                          className="w-5 h-5 mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900">{article.nom}</div>
+                          {article.description && (
+                            <div className="text-sm text-gray-600">{article.description}</div>
+                          )}
+                          {article.channels && article.channels.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {article.channels.map((channel: any) => (
+                                <span
+                                  key={channel.id}
+                                  className="px-2 py-1 rounded text-xs font-medium"
+                                  style={{
+                                    backgroundColor: '#fed7aa',
+                                    color: '#c2410c'
+                                  }}
+                                >
+                                  {channel.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+
+                    {bulkMode === 'vins' && vins.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">Aucune fiche de vin trouvée</div>
+                    )}
+
+                    {bulkMode === 'articles' && articles.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">Aucun article standard trouvé</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
