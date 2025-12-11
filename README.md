@@ -4,10 +4,10 @@ Application de gestion d'inventaire de cave à vin avec photos depuis tablette.
 
 ## ✅ Stack technique
 
-- **Frontend** : Next.js 15 + React + TypeScript
-- **Styling** : Tailwind CSS
+- **Frontend** : Next.js 15.1.9 + React 19 + TypeScript
+- **Styling** : Tailwind CSS v4
 - **Backend** : Supabase (BDD PostgreSQL + Storage)
-- **Déploiement** : Netlify
+- **Déploiement** : Vercel (gratuit)
 
 ---
 
@@ -38,9 +38,9 @@ Ouvrez http://localhost:3000 dans votre navigateur.
 
 ---
 
-## 📦 Déployer sur NETLIFY
+## 📦 Déployer sur VERCEL
 
-### Option 1 : Via l'interface Netlify (recommandé)
+### Via l'interface Vercel (recommandé)
 
 1. **Pousser le code sur GitHub** :
    ```bash
@@ -49,40 +49,28 @@ Ouvrez http://localhost:3000 dans votre navigateur.
    git push origin main
    ```
 
-2. **Connecter à Netlify** :
-   - Allez sur https://app.netlify.com
-   - Cliquez sur "Add new site" > "Import an existing project"
-   - Choisissez "Deploy with GitHub"
+2. **Connecter à Vercel** :
+   - Allez sur https://vercel.com
+   - Connectez-vous avec GitHub
+   - Cliquez sur "Add New..." > "Project"
    - Sélectionnez votre repo `inventaire-cave`
+   - Vercel détecte automatiquement Next.js
 
-3. **Configuration du build** :
-   - **Build command** : `npm run build`
-   - **Publish directory** : `.next`
-   - **Framework preset** : Next.js
-
-4. **Variables d'environnement** :
-   - Cliquez sur "Site settings" > "Environment variables"
+3. **Variables d'environnement** :
+   - Déroulez la section "Environment Variables"
    - Ajoutez :
-     - `NEXT_PUBLIC_SUPABASE_URL` = votre URL
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = votre clé
+     - `NEXT_PUBLIC_SUPABASE_URL` = votre URL Supabase
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = votre clé anon (publique)
+     - `SUPABASE_SERVICE_ROLE_KEY` = votre clé service_role (secrète)
 
-5. **Déployer** :
-   - Cliquez sur "Deploy site"
-   - Attendez 2-3 minutes
+4. **Déployer** :
+   - Cliquez sur "Deploy"
+   - Attendez 1-2 minutes
    - Votre site est en ligne ! 🎉
 
-### Option 2 : Via Netlify CLI
+### Déploiements automatiques
 
-```bash
-# Installer Netlify CLI
-npm install -g netlify-cli
-
-# Login
-netlify login
-
-# Déployer
-netlify deploy --prod
-```
+Après la configuration initiale, chaque `git push` sur la branche `main` déclenche automatiquement un nouveau déploiement sur Vercel.
 
 ---
 
@@ -176,9 +164,16 @@ npm install
 
 Pour toute question, vérifiez :
 1. Console du navigateur (F12)
-2. Logs Netlify (onglet "Deploys")
+2. Logs Vercel (onglet "Deployments" > cliquez sur un déploiement > "Logs")
 3. Logs Supabase (onglet "Logs")
 
 ---
 
-**Développé en 1 nuit avec Claude AI** 🤖🍷
+## 🌐 URL de production
+
+- **Application** : https://inventaire-cave.vercel.app (ou votre domaine personnalisé)
+- **Supabase** : https://kqgdkrgyoyfqhwyfzkor.supabase.co
+
+---
+
+**Développé avec Claude AI** 🤖🍷

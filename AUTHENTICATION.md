@@ -168,3 +168,13 @@ Chaque article ou vin peut avoir un des statuts suivants :
 3. Créer les pages manquantes (Articles, Comptes, Tags)
 4. Ajouter les filtres par statut et canal
 5. Implémenter l'upload de photos pour les articles standards
+
+## Déploiement
+
+L'application est déployée sur **Vercel** (gratuit) avec déploiement automatique depuis GitHub.
+
+- **URL de production** : https://inventaire-cave.vercel.app
+- **Variables d'environnement** configurées sur Vercel :
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
